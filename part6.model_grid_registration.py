@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import mod_input_grid
+import mod_input
 import mod_geo
 import mod_pandas
 import mod_refmodels
@@ -9,24 +9,30 @@ import glob
 import os
 
 
-# define relevant input variables from mod_input_grid, including file names and paths
-cdp = mod_input_grid.computed_decimal_places
-input_csv = str(mod_input_grid.input_model)+'.csv'
-output_csv = str(mod_input_grid.input_model)+'_grid_registered.csv'
-df_shells = pd.read_csv(mod_input_grid.shell_file)
-df_blocks = pd.read_csv(mod_input_grid.block_file)
-lat_header = mod_input_grid.lat_header
-lon_header = mod_input_grid.lon_header
-depth_header = mod_input_grid.depth_header
-prop_header = mod_input_grid.property_header
+# define relevant input variables from mod_input, including file names and paths
+cdp = mod_input.computed_decimal_places
+input_csv = f'{mod_input.input_model}.csv'
+output_csv = f'{mod_input.input_model}_grid_registered.csv'
+df_shells = pd.read_csv(mod_input.shell_file)
+df_blocks = pd.read_csv(mod_input.block_file)
+lat_header = mod_input.lat_header
+lon_header = mod_input.lon_header
+depth_header = mod_input.depth_header
+prop_header = mod_input.property_header
+if mod_input.data_wave_type == 'S':
+    out_property_header = 'dVs_%'
+    RMS_header = 'RMS_dVs'
+elif mod_input.data_wave_type == 'P':
+    out_property_header = 'dVp_%'
+    RMS_header = 'RMS_dVp'
 
 
 # define the input model to interpolate
-df_input_model = pd.read_csv(f'./{mod_input_grid.tomography_model_directory}/{mod_input_grid.wave_type}/{mod_input_grid.input_model}_update/{input_csv}', sep = mod_input_grid.delimiter, comment = '#')
+df_input_model = pd.read_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/{input_csv}', sep = mod_input.delimiter, comment = '#')
 
 # compute the voigt average, if necessary
-if mod_input_grid.voigt[0] == True:
-    df_input_model[prop_header] = np.sqrt(((2. * (df_input_model[mod_input_grid.voigt[1]] ** 2)) + (df_input_model[mod_input_grid.voigt[2]] ** 2)) / 3.)
+if mod_input.voigt[0] == True:
+    df_input_model[prop_header] = np.sqrt(((2. * (df_input_model[mod_input.voigt[1]] ** 2)) + (df_input_model[mod_input.voigt[2]] ** 2)) / 3.)
 
 df_model = df_input_model[[lat_header, lon_header, depth_header, prop_header]]
 
@@ -76,7 +82,7 @@ for shell in shell_ids:
         new_shells.append(shell)
         new_blocks.append(block)
         new_props.append(0.)
-df_interp = pd.DataFrame(data = {'SHELL#': new_shells, 'BLOCK#': new_blocks, mod_input_grid.out_property_header: new_props})
+df_interp = pd.DataFrame(data = {'SHELL#': new_shells, 'BLOCK#': new_blocks, out_property_header: new_props})
 
 
 ## MAKE DATAFRAMES FOR MODEL BLOCKS ##
@@ -174,11 +180,10 @@ df_radial = pd.DataFrame(data = {'SHELL#': shell_ids, 'CENTER_DEPTH': center_dep
 # for shell in shell_ids:
 for s in range(len(df_radial)):
     shell = df_radial['SHELL#'].iloc[s]
-    print(f'Interpolation: working on shell# {shell}')
     if shell == shell_ids[0]:
         for block in block_ids:
             element_idx = df_interp.loc[(df_interp['BLOCK#'] == block) & (df_interp['SHELL#'] == shell)].index
-            df_interp.loc[element_idx, mod_input_grid.out_property_header] = 0.
+            df_interp.loc[element_idx, out_property_header] = 0.
     else:
         # grab the center depth from our depth shells. this is the target depth
         # find the values for the min and max depths from the model
@@ -225,36 +230,28 @@ for s in range(len(df_radial)):
                 
             # append values to new lists
             element_idx = df_interp.loc[(df_interp['BLOCK#'] == block_id) & (df_interp['SHELL#'] == shell)].index
-            df_interp.loc[element_idx, mod_input_grid.out_property_header] = i7
+            df_interp.loc[element_idx, out_property_header] = i7
 
 shells = df_interp['SHELL#'].unique()
 blocks = df_interp['BLOCK#'].unique()
 mid_depths = list(df_shells['DEPTH_MID'])
 
+# convert values to % perturb. relative to the reference model
+for shell in shells[1:]:
+    df_update_slice = df_interp.loc[df_interp['SHELL#'] == shell].copy()
+    update_mid_depth = float(df_shells.loc[df_shells['SHELL#'] == shell]['DEPTH_MID'])
+    update_ref_val = mod_refmodels.prem_val(mod_input.data_wave_type, update_mid_depth)
 
-## UPDATE REFERENCE MODEL ##
-if mod_input_grid.update_reference == True:
-
-    for shell in shells[1:]:
-        df_update_slice = df_interp.loc[df_interp['SHELL#'] == shell].copy()
-        update_mid_depth = float(df_shells.loc[df_shells['SHELL#'] == shell]['DEPTH_MID'])
+    for b in range(len(df_update_slice)):
+        block = df_update_slice['BLOCK#'].iloc[b]
+        vel = df_update_slice[out_property_header].iloc[b]
+        updated_perturbation = ((vel / update_ref_val) * 100.) - 100.
         
-        if mod_input_grid.wave_type == 'S':
-            update_ref_val = mod_refmodels.prem_vs(update_mid_depth)
-        elif mod_input_grid.wave_type == 'P':
-            update_ref_val = mod_refmodels.prem_vp(update_mid_depth)
-
-        for b in range(len(df_update_slice)):
-            block = df_update_slice['BLOCK#'].iloc[b]
-            vel = df_update_slice[mod_input_grid.out_property_header].iloc[b]
-            updated_perturbation = ((vel / update_ref_val) * 100.) - 100.
-            
-            element_idx = df_interp.loc[(df_interp['BLOCK#'] == block) & (df_interp['SHELL#'] == shell)].index
-            df_interp.loc[element_idx, mod_input_grid.out_property_header] = updated_perturbation
+        element_idx = df_interp.loc[(df_interp['BLOCK#'] == block) & (df_interp['SHELL#'] == shell)].index
+        df_interp.loc[element_idx, out_property_header] = updated_perturbation
 
 
 ## RMS PERTURBATION COMPUTATION ##
-print(f'computing RMS profile')
 def rms(property_list):
     n = len(property_list)
     x = 0
@@ -268,7 +265,7 @@ n = []
 
 for shell in shells:
     df_slice = df_interp.loc[df_interp['SHELL#'] == shell]
-    v = rms(list(df_slice[mod_input_grid.out_property_header]))
+    v = rms(list(df_slice[out_property_header]))
     s.append(shell)
     r.append(v)
 
@@ -279,29 +276,12 @@ for val in r:
     n.append(w)
 
 # save the rms file
-df_rms = pd.DataFrame(data = {'SHELL#': s, mod_input_grid.RMS: r, f'NORM_{mod_input_grid.RMS}': n})
-np.savetxt(f'./{mod_input_grid.tomography_model_directory}/{mod_input_grid.wave_type}/{mod_input_grid.input_model}_update/{mod_input_grid.input_model}_{mod_input_grid.RMS}.csv', df_rms, fmt = f'%i,%1.{cdp}f,%1.{cdp}f', delimiter = ',', header = f'SHELL#,{mod_input_grid.RMS},NORM_{mod_input_grid.RMS}', comments = '')
+df_rms = pd.DataFrame(data = {'SHELL#': s, RMS_header: r, f'NORM_{RMS_header}': n})
+np.savetxt(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/{mod_input.input_model}_{RMS_header}.csv', df_rms, fmt = f'%i,%1.{cdp}f,%1.{cdp}f', delimiter = ',', header = f'SHELL#,{RMS_header},NORM_{RMS_header}', comments = '')
 
 
 # save the interpolated file
-col_names = f'SHELL#,BLOCK#,{mod_input_grid.out_property_header}'
-np.savetxt(f'./{mod_input_grid.tomography_model_directory}/{mod_input_grid.wave_type}/{mod_input_grid.input_model}_update/{output_csv}', df_interp, fmt = f'%i,%i,%1.{cdp}f', delimiter = ',', header = col_names, comments = '')
-print(f'RMS and interpolated files SAVED')
+col_names = f'SHELL#,BLOCK#,{out_property_header}'
+np.savetxt(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/{output_csv}', df_interp, fmt = f'%i,%i,%1.{cdp}f', delimiter = ',', header = col_names, comments = '')
 
 
-## BUILD BLOCK-CENTRIC FILE STRUCTURE FOR UPDATE ##
-# print('building block-centric file structure')
-# os.mkdir(f'./{mod_input_grid.tomography_model_directory}/{mod_input_grid.wave_type}/{mod_input_grid.input_model}_update/{mod_input_grid.block_centric_directory}')
-
-# total_shells = df_shells['SHELL#']
-# total_blocks = df_blocks['BLOCK#']
-    
-# for shell in total_shells:
-#     os.mkdir(f'./{mod_input_grid.tomography_model_directory}/{mod_input_grid.wave_type}/{mod_input_grid.input_model}_update/{mod_input_grid.block_centric_directory}/shell_{shell}')
-#     for block in total_blocks:
-#         # make a file for every block with the same columns:
-#         col_names = f'PHASE,PATH_ID,START_LAT,START_LON,START_DEPTH,CENTER_LAT,CENTER_LON,END_LAT,END_LON,END_DEPTH,PATH_LENGTH_DEG,PATH_LENGTH_KM,{mod_input_grid.perturbation_header},AZIMUTH,SECTOR,COMP_WEIGHT\n'
-#         with open(f'./{mod_input_grid.tomography_model_directory}/{mod_input_grid.wave_type}/{mod_input_grid.input_model}_update/{mod_input_grid.block_centric_directory}/shell_{shell}/block_{block}.csv', 'w') as file:
-#             file.write(col_names)
-
-print('done')
