@@ -33,6 +33,7 @@ hipr_phases = ['S', 'SS', 'SSS', 'ScS', 'ScSScS', 'Sdiff']
 # INPUT DATA FILES #
 dataset = 'eventinfo.clean.virtual_stack.all.csv' # 'eventinfo.multi_phase_single_pick.csv' #'eventinfo.comprehensive.6phase.Nov15.2019.csv'
 raw_headers_to_keep = ['COMPREHENSIVE_WEIGHT']
+data_wave_type = 'S' # either 'S' or 'P'
 
 # REFERENCE MODEL #
 reference_model = 'prem' # prem, (ak135, iasp91 eventually?)
@@ -60,10 +61,10 @@ target_path_length_tolerance = 5 # km
 
 
 # INPUT MODEL PARAMETERES #
-crustal_model = 'CRUST_1.0' # name of crustal model to correct for
-crustal_model_increment = 1
-crustal_model_layers = ['water', 'ice', 'upper_sediments', 'middle_sediments', 'lower_sediments', 'upper_crust', 'middle_crust', 'lower_crust', 'mantle'] # ['ice', 'water', 'soft_sediments', 'hard_sediments', 'upper_crust', 'middle_crust', 'lower_crust', 'mantle'] # 
-crustal_correction_data_label = 'CRUST_1.0_CORR'
+# crustal_model = 'CRUST_1.0' # name of crustal model to correct for
+# crustal_model_increment = 1
+# crustal_model_layers = ['water', 'ice', 'upper_sediments', 'middle_sediments', 'lower_sediments', 'upper_crust', 'middle_crust', 'lower_crust', 'mantle'] # ['ice', 'water', 'soft_sediments', 'hard_sediments', 'upper_crust', 'middle_crust', 'lower_crust', 'mantle'] # 
+# crustal_correction_data_label = 'CRUST_1.0_CORR'
 
 input_model = 'PREM' # name of input model file
 residual_header = 'SYNTH_DT_S40RTS_dvs_1.0_5.0' #'CRUST_1.0_ELLIP_DT' #'DT' #'DT_CORR' # column name of the residual that you want to use in the data file.
@@ -78,11 +79,9 @@ voigt = [False] #[False] [True, 'vpv', 'vph']
 
 
 # OUTPUT FILE PARAMETERS #
-physical_property = 'vs'
-segment_property_header = 'SEG_VS'
+# physical_property = 'vs'
+# segment_property_header = f'SEG_V{data_wave_type}'
 perturbation_header = 'dVs_%'
-station_lat_header = 'STA_LAT'
-station_lon_header = 'STA_LON'
 out_property_header = 'dvs (%)'
 RMS = 'RMS_dVs'
 
@@ -124,10 +123,11 @@ shell_file = 'shell_dimensions.csv'
 block_file = 'block_dimensions.csv'
 phases_directory = 'phases'
 data_directory = 'phase_data'
-orig_paths_directory = 'original_path_files'
-resampled_paths_directory = 'resampled_path_files'
+# orig_paths_directory = 'original_path_files'
+# resampled_paths_directory = 'resampled_path_files'
 backmapped_paths_directory = 'backmapped_path_files'
-tomography_paths_directory = 'model_path_files'
+# tomography_paths_directory = 'model_path_files'
+paths_directory = 'raypath_files'
 tomography_model_directory = 'models'
 near_neighbors_directory = 'near_neighbors'
 block_centric_directory = 'model_block_information'

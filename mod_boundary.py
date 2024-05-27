@@ -80,6 +80,13 @@ def different_shell_same_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
             bd_shells.append(bound)
             bd_blocks.append(block1)
             bd_types.append(bound_type)
+
+    for n in range(len(bd_lons)):
+        if bd_lons[n] >= 180.:
+            bd_lons[n] -= 360.
+        if bd_lons[n] < -180:
+            bd_lons[n] += 360
+    
     bd_info = [bd_depths, bd_dists, bd_lats, bd_lons, bd_shells, bd_blocks, bd_types]
     return bd_info
 
@@ -350,6 +357,13 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
                 bd_types.append(lat_bound_type)
             lat_ref_lat = lat_bound_pt[0]
             lat_ref_lon = lat_bound_pt[1]
+    
+    for n in range(len(bd_lons)):
+        if bd_lons[n] >= 180.:
+            bd_lons[n] -= 360.
+        if bd_lons[n] < -180:
+            bd_lons[n] += 360
+
     bd_info = [bd_depths, bd_dists, bd_lats, bd_lons, bd_shells, bd_blocks, bd_types]
     return bd_info
 
@@ -717,6 +731,13 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
         init_block = shell_bound_info[5]
         init_lat = shell_bound_info[2]
         init_lon = shell_bound_info[3]
+
+    for n in range(len(bd_lons)):
+        if bd_lons[n] >= 180.:
+            bd_lons[n] -= 360.
+        if bd_lons[n] < -180:
+            bd_lons[n] += 360
+    
     bd_info = [bd_depths, bd_dists, bd_lats, bd_lons, bd_shells, bd_blocks, bd_types]
     return bd_info
 

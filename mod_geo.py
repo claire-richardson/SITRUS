@@ -155,6 +155,10 @@ def cart2coord(x, y, z):
     '''
     lat = round(math.degrees(math.asin(z / 1.)), cdp)
     lon = round(math.degrees(math.atan2(y, x)), cdp)
+    if lon >= 180.:
+        lon -= 360.
+    if lon < -180:
+        lon += 360
     return [float(lat), float(lon)]
 
 ## find the coordinates of a point between two other points on the same great circle path
@@ -291,6 +295,7 @@ def pt_from_dist(azimuth, lat1, lon1, dist):
     azimuth = float(azimuth)
     lat1 = float(lat1)
     lon1 = float(lon1)
+    
     if round(azimuth, rdp) == 360. or round(azimuth, rdp) == 0.:
         new_lat = lat1 + dist
         new_lon = lon1
@@ -300,9 +305,8 @@ def pt_from_dist(azimuth, lat1, lon1, dist):
             if lon1 < 0.:
                 new_lon = lon1 + 180.
             elif lon1 >= 0.:
-                new_lon = lon1 - 180.        
-        if round(new_lon, rdp) == 180.:
-            new_lon = -180.
+                new_lon = lon1 - 180.
+                
     elif round(azimuth, rdp) == 180.:
         new_lat = lat1 - dist
         new_lon = lon1
@@ -313,8 +317,7 @@ def pt_from_dist(azimuth, lat1, lon1, dist):
                 new_lon = lon1 + 180.
             elif lon1 >= 0.:
                 new_lon = lon1 - 180.
-        if round(new_lon, rdp) == 180.:
-            new_lon = -180.
+                
     # if path is eastbound:
     elif 0. < round(azimuth, rdp) < 180.:
         B_ang = math.radians(azimuth)
@@ -328,9 +331,7 @@ def pt_from_dist(azimuth, lat1, lon1, dist):
         b_side = math.acos((math.cos(c_side) * math.cos(a_side)) + (math.sin(c_side) * math.sin(a_side) * math.cos(B_ang)))
         new_lat = 90. - math.degrees(b_side)
         new_lon = lon1 + math.degrees(A_ang)
-        if round(new_lon, rdp) >= 180.:
-            diff = new_lon - 180.
-            new_lon = -180. + diff
+        
     # if the path is westbound:
     elif 180. < round(azimuth, rdp) < 360.:
         B_ang = math.radians(360. - azimuth)
@@ -344,10 +345,14 @@ def pt_from_dist(azimuth, lat1, lon1, dist):
         b_side = math.acos((math.cos(c_side) * math.cos(a_side)) + (math.sin(c_side) * math.sin(a_side) * math.cos(B_ang)))
         new_lat = 90. - math.degrees(b_side)
         new_lon = lon1 - math.degrees(A_ang)
-        if round(new_lon, rdp) < -180.:
-            diff = -180. - new_lon
-            new_lon = 180. - diff
+        
+    if round(new_lon, rdp) >= 180.:
+        new_lon -= 360.
+    if round(new_lon, rdp) < -180:
+        new_lon += 360
+
     return [round(new_lat, cdp), round(new_lon, cdp)]
+
 
 def known_lat(az, lat1, lon1, bound_lat):
     '''
@@ -376,10 +381,7 @@ def known_lat(az, lat1, lon1, bound_lat):
         a_side = 2 * math.atan((math.cos(0.5 * (B_ang + C_ang)) / math.cos(0.5 * (B_ang - C_ang))) * (math.tan(0.5 * (b_side + c_side))))
         bound_dist = math.degrees(a_side)
         bound_lon = lon1 + math.degrees(A_ang)
-        if round(bound_lon, rdp) >= 180.:
-            bound_lon = bound_lon - 360.
-        if round(bound_lon, rdp) < -180.:
-            bound_lon = bound_lon + 360.
+
     elif 90. < round(az, rdp) < 180.:
         B_ang = math.radians(az)
         C_ang = math.asin((math.sin(c_side) / math.sin(b_side)) * math.sin(B_ang))
@@ -387,10 +389,7 @@ def known_lat(az, lat1, lon1, bound_lat):
         a_side = 2 * math.atan((math.cos(0.5 * (B_ang + C_ang)) / math.cos(0.5 * (B_ang - C_ang))) * (math.tan(0.5 * (b_side + c_side))))
         bound_dist = math.degrees(a_side)
         bound_lon = lon1 + math.degrees(A_ang)
-        if round(bound_lon, rdp) >= 180.:
-            bound_lon = bound_lon - 360.
-        if round(bound_lon, rdp) < -180.:
-            bound_lon = bound_lon + 360.
+
     elif 180. < round(az, rdp) < 270.:
         B_ang = math.radians(360. - az)
         C_ang = math.asin((math.sin(c_side) / math.sin(b_side)) * math.sin(B_ang))
@@ -398,10 +397,7 @@ def known_lat(az, lat1, lon1, bound_lat):
         a_side = 2 * math.atan((math.cos(0.5 * (B_ang + C_ang)) / math.cos(0.5 * (B_ang - C_ang))) * (math.tan(0.5 * (b_side + c_side))))
         bound_dist = math.degrees(a_side)
         bound_lon = lon1 - math.degrees(A_ang)
-        if round(bound_lon, rdp) >= 180.:
-            bound_lon = bound_lon - 360.
-        if round(bound_lon, rdp) < -180.:
-            bound_lon = bound_lon + 360.
+
     elif 270. < round(az, rdp) < 360.:
         B_ang = math.radians(360. - az)
         C_ang = math.pi - (math.asin((math.sin(c_side) / math.sin(b_side)) * math.sin(B_ang)))
@@ -409,36 +405,33 @@ def known_lat(az, lat1, lon1, bound_lat):
         a_side = 2 * math.atan((math.cos(0.5 * (B_ang + C_ang)) / math.cos(0.5 * (B_ang - C_ang))) * (math.tan(0.5 * (b_side + c_side))))           
         bound_dist = math.degrees(a_side)
         bound_lon = lon1 - math.degrees(A_ang)
-        if round(bound_lon, rdp) >= 180.:
-            bound_lon = bound_lon - 360.
-        if round(bound_lon, rdp) < -180.:
-            bound_lon = bound_lon + 360.
+
     elif round(az, rdp) == 0. or round(az, rdp) == 360.:
         bound_lon = lon1
         bound_dist = bound_lat - lat1
+
     elif round(az, rdp) == 90.:
         B_ang = math.radians(az)
         a_side = math.acos(math.cos(b_side) / math.cos(c_side))
         A_ang = math.acos(math.tan(c_side) / math.tan(b_side))
         bound_lon = lon1 + math.degrees(A_ang)
         bound_dist = math.degrees(a_side)
-        if round(bound_lon, rdp) >= 180.:
-            bound_lon = bound_lon - 360.
-        if round(bound_lon, rdp) < -180.:
-            bound_lon = bound_lon + 360.
+
     elif round(az, rdp) == 180.:
         bound_lon = lon1
         bound_dist = lat1 - bound_lat
+
     elif round(az, rdp) == 270.:
         B_ang = math.radians(360. - az)
         a_side = math.acos(math.cos(b_side) / math.cos(c_side))
         A_ang = math.acos(math.tan(c_side) / math.tan(b_side))
         bound_lon = lon1 - math.degrees(A_ang)
         bound_dist = math.degrees(a_side)
-        if round(bound_lon, rdp) >= 180.:
-            bound_lon = bound_lon - 360.
-        if round(bound_lon, rdp) < -180.:
-            bound_lon = bound_lon + 360.
+
+    if round(bound_lon, rdp) >= 180.:
+        bound_lon -= 360.
+    if round(bound_lon, rdp) < -180:
+        bound_lon += 360
     return [round(bound_lat, cdp), round(bound_lon, cdp), round(bound_dist, cdp)]
     
 def known_lon(az, lat1, lon1, bound_lon):
@@ -556,8 +549,10 @@ def known_lon(az, lat1, lon1, bound_lon):
             b_side = math.pi + b_side
         bound_dist = math.degrees(a_side)
         bound_lat = 90. - math.degrees(b_side)
-    if round(bound_lon, rdp) == 180.:
-        bound_lon = -180.
+    if round(bound_lon, rdp) >= 180.:
+        bound_lon -= 360.
+    if round(bound_lon, rdp) < -180:
+        bound_lon += 360
     return [round(bound_lat, cdp), round(bound_lon, cdp), round(bound_dist, cdp)]
 
 
@@ -651,9 +646,7 @@ def inflection_finder(az, baz, lat1, lon1, lat2, lon2, dist1, dist2):
             inflection_A_prime = math.degrees(math.asin(math.sin(inflection_ang) / math.sin(c_side)))
             inflection_lat = 90. - inflection_colat
             inflection_lon = lon1 + inflection_A_prime
-            if round(inflection_lon, rdp) >= 180.:
-                diff = inflection_lon - 180.
-                inflection_lon = -180. + diff
+
         elif quadrant == 'II':
             B_ang = math.radians(az)
             C_ang = math.radians(360. - baz)
@@ -663,9 +656,7 @@ def inflection_finder(az, baz, lat1, lon1, lat2, lon2, dist1, dist2):
             inflection_A_prime = math.degrees(math.asin(math.sin(inflection_ang) / math.sin(c_side)))
             inflection_lat = 90. - inflection_colat
             inflection_lon = lon1 + inflection_A_prime
-            if round(inflection_lon, rdp) >= 180.:
-                diff = inflection_lon - 180.
-                inflection_lon = -180. + diff
+
         elif quadrant == 'III':
             B_ang = math.radians(360. - az)
             C_ang = math.radians(baz)
@@ -675,9 +666,7 @@ def inflection_finder(az, baz, lat1, lon1, lat2, lon2, dist1, dist2):
             inflection_A_prime = math.degrees(math.asin(math.sin(inflection_ang) / math.sin(c_side)))
             inflection_lat = 90. - inflection_colat
             inflection_lon = lon1 - inflection_A_prime
-            if round(inflection_lon, rdp) < -180.:
-                diff = -180. - inflection_lon
-                inflection_lon = 180. - diff
+
         elif quadrant == 'IV':
             B_ang = math.radians(360. - az)
             C_ang = math.radians(baz)
@@ -687,9 +676,12 @@ def inflection_finder(az, baz, lat1, lon1, lat2, lon2, dist1, dist2):
             inflection_A_prime = math.degrees(math.asin(math.sin(inflection_ang) / math.sin(c_side)))
             inflection_lat = 90. - inflection_colat
             inflection_lon = lon1 - inflection_A_prime
-            if round(inflection_lon, rdp) < -180.:
-                diff = -180. - inflection_lon
-                inflection_lon = 180. - diff
+                
+        if round(inflection_lon, rdp) >= 180.:
+            inflection_lon -= 360.
+        if round(inflection_lon, rdp) < -180:
+            inflection_lon += 360
+        
         return [inflection, round(inflection_dist, cdp), round(inflection_lat, cdp), round(inflection_lon, cdp)]
     # if there isn't an inflection point, just return False
     else:
