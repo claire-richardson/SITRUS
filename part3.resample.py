@@ -137,6 +137,10 @@ def add_bound_info(depth, dist, lat, lon, shell, block, bound_type):
 
 # boundary finding code/function for each parallel process:
 def find_boundaries_resample(phase):
+    try:
+        os.remove(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pt3_boundary_finding_log.txt')
+    except:
+        pass
     start_boundary_finding_time = time.time()
     ## Start code ##
     df_phase_data = pd.read_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_master_data.csv')
@@ -147,7 +151,7 @@ def find_boundaries_resample(phase):
     # begin master loop to loop through all raypaths
     for path in paths:
         itr += 1
-        with open(f'./{phases_directory}/{data_directory}/{phase}_pt3_boundary_finding_log.txt', 'a') as fout:
+        with open(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pt3_boundary_finding_log.txt', 'a') as fout:
             fout.write(f'- working on path {itr} of {len(paths)}\n')
         try:
             df_p = pd.read_csv(path)
@@ -524,12 +528,12 @@ def find_boundaries_resample(phase):
     df_phase_data['CRUST_1.0_ELLIP_DT'] = df_phase_data['DT'] - df_phase_data['CRUST_1.0_CORR'] - df_phase_data['ELLIP_CORR']
     df_phase_data.to_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_master_data.csv', index = False)
 
-    with open(f'./{phases_directory}/{data_directory}/{phase}_pt3_boundary_finding_log.txt', 'a') as fout:
+    with open(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pt3_boundary_finding_log.txt', 'a') as fout:
         fout.write(f'FINISHED; total time: {(time.time() - start_boundary_finding_time) / 60 minutes; {((time.time() - start_boundary_finding_time) / 60) / 60} hours\n')
 
 ## Start parallel processes:
 print(f'START FINDING BOUNDARIES AND RESAMPLING RAYPATHS')
-make_raypaths_start = time.time()
+bound_finding_start = time.time()
 
 if __name__ == '__main__':
     process_list = []
@@ -545,8 +549,8 @@ if __name__ == '__main__':
     for process in process_list:
         process.join()
 
-make_raypaths_time = time.time() - make_raypaths_start
-print(f'FINISHED FINDING BOUNDARIES AND RESAMPLING; runtime: {backmapping_time / 60} minutes / {(backmapping_time / 60) / 60} hours')
+bound_finding_time = time.time() - bound_finding_start
+print(f'FINISHED FINDING BOUNDARIES AND RESAMPLING; runtime: {bound_finding_time / 60} minutes / {(bound_finding_time / 60) / 60} hours')
 
 
 
