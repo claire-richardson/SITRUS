@@ -1,7 +1,7 @@
-import numpy as np
-import pandas as pd
 import multiprocessing as mp
 import mod_refmodels
+import pandas as pd
+import numpy as np
 import mod_pandas
 import mod_input
 import mod_geo
@@ -16,16 +16,22 @@ import os
 cdp = mod_input.computed_decimal_places
 rdp = mod_input.rounded_decimal_places
 sectors = mod_input.azimuthal_sectors
-sector_extent = mod_input.azimuthal_sector_extent
+sector_extent = 180. / mod_input.azimuthal_sectors
 sector_ids = list(range(1, sectors + 1))
 model = mod_input.input_model
 job_id = str(sys.argv[1])
+if mod_input.data_wave_type == 'S':
+    out_property_header = 'dVs_%'
+    RMS_header = 'RMS_dVs'
+elif mod_input.data_wave_type == 'P':
+    out_property_header = 'dVp_%'
+    RMS_header = 'RMS_dVp'
 
 # define data frames of the input model (df_model) and the RMS property values (df_rms)
 # df_model will update with each iteration
-df_original_model = pd.read_csv(f'./{mod_input.tomography_model_directory}/{mod_input.wave_type}/{model}_update/{model}_grid_registered.csv')
-df_model = pd.read_csv(f'./{mod_input.tomography_model_directory}/{mod_input.wave_type}/{model}_update/{model}_grid_registered.csv')
-df_rms = pd.read_csv(f'./{mod_input.tomography_model_directory}/{mod_input.wave_type}/{model}_update/{model}_{mod_input.RMS}.csv')
+df_original_model = pd.read_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/{model}_grid_registered.csv')
+df_model = pd.read_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/{model}_grid_registered.csv')
+df_rms = pd.read_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/{model}_{RMS_header}.csv')
 
 
 # compute azimuthal sector extents and define a dataframe with those attributes and sector ids (df_sectors)
@@ -81,7 +87,7 @@ for sh_all in all_shells:
         sh_col_all.append(sh_all)
         bl_col_all.append(bl_all)
 try:
-    plot_dir = f'./{mod_input.tomography_model_directory}/{mod_input.wave_type}/{model}_update/original_model_plot_files'
+    plot_dir = f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/original_model_plot_files'
     os.mkdir(plot_dir)
     for shell_to_plot in all_shells:
         og_perturbs_file = f'{plot_dir}/{model}_shell_{shell_to_plot}_original_perturbs_plot_ready_{mod_input.reference_lat}deg_lat_by_{mod_input.reference_lon}deg_lon.csv'
@@ -98,7 +104,7 @@ try:
             for lon in np.arange(mod_input.start_lon, mod_input.final_lon, mod_input.reference_lon):
                 # find the block that the current lat/lon pair falls in
                 block = mod_pandas.find_block_id(lat, lon)
-                original_perturb = float(df_og_shell_data.loc[df_og_shell_data['BLOCK#'] == block][mod_input.out_property_header])
+                original_perturb = float(df_og_shell_data.loc[df_og_shell_data['BLOCK#'] == block][out_property_header])
                 lat_og_dvs.append(original_perturb)
             og_dvs.append(np.array(lat_og_dvs))
             df_original[f'{lat}'] = lat_og_dvs
@@ -166,7 +172,7 @@ def backmap_residual(lists_of_paths, list_idx):
 
                         # df_model_slice is the single line in the model dataframe for the element that the current path segment is in.
                         # from df_model_slice, find the velocity perturbation of that element (model_element_perturb)
-                        model_element_perturb = float(df_model.loc[(df_model['SHELL#'] == shell_no) & (df_model['BLOCK#'] == block_no)][mod_input.out_property_header])
+                        model_element_perturb = float(df_model.loc[(df_model['SHELL#'] == shell_no) & (df_model['BLOCK#'] == block_no)][out_property_header])
 
                         # find the velocity value for the path segment through the starting model.
                         seg_v = prem_val + ((model_element_perturb / 100.) * prem_val)
@@ -208,10 +214,10 @@ def backmap_residual(lists_of_paths, list_idx):
                         df_p_update = df_p.loc[df_p['SEG_SHELL#'] >= layer_top_shell].copy().reset_index(drop = True)
                         df_layer_rms = df_rms.loc[df_rms['SHELL#'] >= layer_top_shell].copy().reset_index(drop = True)
                         
-                        if df_layer_rms[f'NORM_{mod_input.RMS}'].all() == 0.:
-                            df_layer_rms[f'NORM_{mod_input.RMS}'] = 1.
+                        if df_layer_rms[f'NORM_{RMS_header}'].all() == 0.:
+                            df_layer_rms[f'NORM_{RMS_header}'] = 1.
                         else:
-                            df_layer_rms[f'NORM_{mod_input.RMS}'] = df_layer_rms[f'NORM_{mod_input.RMS}'] / df_layer_rms[f'NORM_{mod_input.RMS}'].max()
+                            df_layer_rms[f'NORM_{RMS_header}'] = df_layer_rms[f'NORM_{RMS_header}'] / df_layer_rms[f'NORM_{RMS_header}'].max()
                         
                         if math.isnan(df_p_update['SEG_TIME'].sum()) == True or df_p_update['SEG_TIME'].sum() == 0.:
                             with open(f'{iteration_directory_path}/{list_idx}_nan_bug.txt', 'a') as fout:
@@ -225,7 +231,7 @@ def backmap_residual(lists_of_paths, list_idx):
 
                     for segment in range(len(df_p_update)):
                         segment_shell_no = df_p_update['SEG_SHELL#'].iloc[segment]
-                        norm_rms_update = float(df_layer_rms.loc[df_layer_rms['SHELL#'] == segment_shell_no][f'NORM_{mod_input.RMS}'])
+                        norm_rms_update = float(df_layer_rms.loc[df_layer_rms['SHELL#'] == segment_shell_no][f'NORM_{RMS_header}'])
                         df_p_update.loc[segment, 'norm_rms'] = norm_rms_update                    
 
 
@@ -318,7 +324,7 @@ def backmap_residual(lists_of_paths, list_idx):
         
 
 def model_smoothing(shell_no):
-    df_updated_model_shell = pd.DataFrame(data = {'SHELL#': shell_no, 'BLOCK#': all_blocks, mod_input.out_property_header: 0.})
+    df_updated_model_shell = pd.DataFrame(data = {'SHELL#': shell_no, 'BLOCK#': all_blocks, out_property_header: 0.})
     # df_smoothing_radius = pd.read_csv(f'{layer_directory}/shell_{shell_no}_smoothing_radii.csv')
     
     for block_no in all_blocks:
@@ -447,10 +453,10 @@ def model_smoothing(shell_no):
                 if smoothing_denominator != 0.:
                     mean_element_perturbation = smoothing_numerator / smoothing_denominator
         else:
-            mean_element_perturbation = float(df_model.loc[(df_model['SHELL#'] == shell_no) & (df_model['BLOCK#'] == block_no)][mod_input.out_property_header])
+            mean_element_perturbation = float(df_model.loc[(df_model['SHELL#'] == shell_no) & (df_model['BLOCK#'] == block_no)][out_property_header])
 
         element_idx = df_updated_model_shell.loc[(df_updated_model_shell['SHELL#'] == shell_no) & (df_updated_model_shell['BLOCK#'] == block_no)].index
-        df_updated_model_shell.loc[element_idx, mod_input.out_property_header] = mean_element_perturbation
+        df_updated_model_shell.loc[element_idx, out_property_header] = mean_element_perturbation
 
     df_updated_model_shell.to_csv(f'{iteration_directory_path}/{model}_updated_shell_{shell_no}.csv', index = False)
 
@@ -595,7 +601,7 @@ def find_smoothing_radii(shell_no):
 ########################
 start = time.time()
 
-update_path = f'./{mod_input.tomography_model_directory}/{mod_input.wave_type}/{model}_update/{job_id}_update'
+update_path = f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/{job_id}_update'
 block_centric_path = f'{update_path}/{mod_input.block_centric_directory}'
 try:
     os.mkdir(update_path)
@@ -648,7 +654,7 @@ for layer_bottom_shell in mod_input.layer_stripping_base_shells:
 
     for phase in phases_to_update:
         phase_name = phase.split('_')[0]
-        all_paths = glob.glob(f'./{mod_input.phases_directory}/{phase}/{mod_input.resampled_paths_directory}/{phase_name}_*.csv') # modify: make for all files per phase, # modify_sol: scratch?
+        all_paths = glob.glob(f'./{mod_input.phases_directory}/{phase}/{mod_input.paths_directory}/{phase_name}_*.csv') # modify: make for all files per phase, # modify_sol: scratch?
         number_of_paths = len(all_paths)
         subset_of_paths = int(number_of_paths * layer_proportion_of_dataset_to_use)
         paths = all_paths[0:subset_of_paths]
@@ -749,8 +755,8 @@ for layer_bottom_shell in mod_input.layer_stripping_base_shells:
                 pass
 
         if iteration_to_stop_RMS != None and iteration_to_stop_RMS <= layer_iteration:
-            df_rms[mod_input.RMS] = 1.
-            df_rms[f'NORM_{mod_input.RMS}'] = 1.
+            df_rms[RMS_header] = 1.
+            df_rms[f'NORM_{RMS_header}'] = 1.
 
         ############################################
         # PART 1: BACKMAP RESIDUALS INTO RAYPATHS. #
@@ -939,15 +945,15 @@ for layer_bottom_shell in mod_input.layer_stripping_base_shells:
 
         for shell_no in all_shells:
             df_shell_rms = df_model.loc[df_model['SHELL#'] == shell_no]
-            rms_value = rms(list(df_shell_rms[mod_input.out_property_header]))
+            rms_value = rms(list(df_shell_rms[out_property_header]))
             df_rms_idx = df_rms.loc[df_rms['SHELL#'] == shell_no].index
-            df_rms.loc[df_rms_idx, mod_input.RMS] = rms_value
+            df_rms.loc[df_rms_idx, RMS_header] = rms_value
 
             with open(f'{block_centric_path}/shell_{shell_no}.csv', 'w') as file:
                 file.write(f'BLOCK#,PHASE,PATH_ID,START_LAT,START_LON,START_DEPTH,CENTER_LAT,CENTER_LON,END_LAT,END_LON,END_DEPTH,PATH_LENGTH_DEG,PATH_LENGTH_KM,{mod_input.perturbation_header},AZIMUTH,SECTOR,COMP_WEIGHT\n')
         
-        max_rms_value = df_rms[mod_input.RMS].max()
-        df_rms[f'NORM_{mod_input.RMS}'] = df_rms[mod_input.RMS] / max_rms_value
+        max_rms_value = df_rms[RMS_header].max()
+        df_rms[f'NORM_{RMS_header}'] = df_rms[RMS_header] / max_rms_value
         df_rms.to_csv(f'{iteration_directory_path}/{model}_updated_rms_itr_{layer_iteration}.csv', index = False)
 
         # make plottable files for the current iteration of the solution model and the difference between this model and the starting model
@@ -994,8 +1000,8 @@ for layer_bottom_shell in mod_input.layer_stripping_base_shells:
                 for lon in lons:
                     # find the block that the current lat/lon pair falls in
                     block = mod_pandas.find_block_id(lat, lon)
-                    original_perturb = float(df_og_shell_data.loc[df_og_shell_data['BLOCK#'] == block][mod_input.out_property_header])
-                    updated_perturb = float(df_model_shell_data.loc[df_model_shell_data['BLOCK#'] == block][mod_input.out_property_header])
+                    original_perturb = float(df_og_shell_data.loc[df_og_shell_data['BLOCK#'] == block][out_property_header])
+                    updated_perturb = float(df_model_shell_data.loc[df_model_shell_data['BLOCK#'] == block][out_property_header])
                     diff_perturb = updated_perturb - original_perturb
                     if layer_iteration == 1:
                         radius = int(df_model_radii.loc[df_model_radii['BLOCK#'] == block]['RADIUS']) - 0.1

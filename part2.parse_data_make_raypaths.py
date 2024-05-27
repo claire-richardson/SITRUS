@@ -7,6 +7,7 @@ import mod_pandas
 import numpy as np
 import pandas as pd
 import mod_refmodels
+import multiprocessing as mp
 from obspy.taup import taup_geo
 from obspy.taup import TauPyModel
 from ellipticipy import ellipticity_correction

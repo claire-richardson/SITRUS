@@ -3,6 +3,7 @@ import time
 import mod_input
 import numpy as np
 import pandas as pd
+import multiprocessing as mp
 
 df_shells = pd.read_csv(mod_input.shell_file)
 df_blocks = pd.read_csv(mod_input.block_file)

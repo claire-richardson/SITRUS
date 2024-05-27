@@ -24,11 +24,7 @@
 
 # PHASE AND DATA NAMING #
 phase = 'SS'
-all_phases = ['S', 'SS', 'SSS', 'ScS', 'ScSScS', 'Sdiff'] # ['SSSm', 'ScSScSScS', 'ScSScSScSScS', 'SSSSm', 'SSSSSm', 'ScSScSScSScSScS', 'SSSSSSm', 'ScSScSScSScSm'] # ['S3', 'ScS', 'ScSScS', 'Sdiff', 'S', 'SSm', 'ScS4', 'ScS3', 'S4m', 'S3m', 'ScS5m', 'S5m', 'ScS3m', 'ScS5', 'S6m', 'ScS4m', 'SS', 'S4', 'S5'] # 
-# dataset_name_mod = '' # '_mb' # '_vs' # 
-all_phases_full = ['S3_vs', 'ScS_vs', 'ScSScS_vs', 'Sdiff_vs', 'S_vs', 'SSm_vs', 'ScS4_vs', 'ScS3_vs', 'S4m_vs', 'S3m_vs', 'ScS5m_vs', 'S5m_vs', 'ScS3m_vs', 'ScS5_vs', 'S6m_vs', 'ScS4m_vs', 'SS_vs', 'S4_vs', 'S5_vs', 'S', 'SS', 'SSS', 'ScS', 'ScSScS', 'Sdiff', 'SSSm_mb', 'ScSScSScS_mb', 'ScSScSScSScS_mb', 'SSSSm_mb', 'SSSSSm_mb', 'ScSScSScSScSScS_mb', 'SSSSSSm_mb', 'ScSScSScSScSm_mb']
-hipr_phases = ['S', 'SS', 'SSS', 'ScS', 'ScSScS', 'Sdiff']
-
+phases_full = ['S3_vs', 'ScS_vs', 'ScSScS_vs', 'Sdiff_vs', 'S_vs', 'SSm_vs', 'ScS4_vs', 'ScS3_vs', 'S4m_vs', 'S3m_vs', 'ScS5m_vs', 'S5m_vs', 'ScS3m_vs', 'ScS5_vs', 'S6m_vs', 'ScS4m_vs', 'SS_vs', 'S4_vs', 'S5_vs', 'S', 'SS', 'SSS', 'ScS', 'ScSScS', 'Sdiff', 'SSSm_mb', 'ScSScSScS_mb', 'ScSScSScSScS_mb', 'SSSSm_mb', 'SSSSSm_mb', 'ScSScSScSScSScS_mb', 'SSSSSSm_mb', 'ScSScSScSScSm_mb']
 
 # INPUT DATA FILES #
 dataset = 'eventinfo.clean.virtual_stack.all.csv' # 'eventinfo.multi_phase_single_pick.csv' #'eventinfo.comprehensive.6phase.Nov15.2019.csv'
@@ -65,21 +61,18 @@ target_path_length_tolerance = 5 # km
 azimuthal_sectors = 6
 
 
-# INPUT MODEL PARAMETERES #
+## INPUT MODEL PARAMETERES #
 input_model = 'PREM' # name of input model file
-residual_header = 'SYNTH_DT_S40RTS_dvs_1.0_5.0' #'CRUST_1.0_ELLIP_DT' #'DT' #'DT_CORR' # column name of the residual that you want to use in the data file.
-# wave_type = 'S' # 'S' or 'P' or 'SYNTH'
 delimiter = '|' # delimiter in converted model.csv file
 lat_header = 'latitude' # header in converted model.csv file
 lon_header = 'longitude' # header in converted model.csv file
 depth_header = 'depth' # header in converted model.csv file
 property_header = 'vs' # header in converted model.csv file
-# update_reference = True # True if the input model needs to be re-referenced to the reference model used for the update, e.g., PREM
 voigt = [False] #[False] [True, 'vpv', 'vph']
 
 
-
-
+## MODEL UPDATE PARAMETERS
+residual_header = 'CRUST_1.0_ELLIP_DT' # column name of the residual that you want to use in the data file.
 
 
 
@@ -101,8 +94,8 @@ voigt = [False] #[False] [True, 'vpv', 'vph']
 # crustal_model_increment = 1
 # crustal_model_layers = ['water', 'ice', 'upper_sediments', 'middle_sediments', 'lower_sediments', 'upper_crust', 'middle_crust', 'lower_crust', 'mantle'] # ['ice', 'water', 'soft_sediments', 'hard_sediments', 'upper_crust', 'middle_crust', 'lower_crust', 'mantle'] # 
 # crustal_correction_data_label = 'CRUST_1.0_CORR'
-
-
+# wave_type = 'S' # 'S' or 'P' or 'SYNTH'
+# update_reference = True # True if the input model needs to be re-referenced to the reference model used for the update, e.g., PREM
 
 
 # OUTPUT FILE PARAMETERS #
@@ -125,10 +118,6 @@ variance_cutoff_type = ['total iterations'] # 'reduction' or 'total iterations'
 variance_cutoff = [10] # if 'reduction', type == float; if 'total iterations', type == int
 proportion_of_dataset_to_use = [1] #.5
 multiprocessing_path_increments = [9000] # 9000 for total dataset, 7500 for limited dataset
-
-
-# COVERAGE PARAMETERS #
-azimuthal_sectors = 6
 
 
 # SMOOTHING PARAMETERS #
