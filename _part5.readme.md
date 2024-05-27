@@ -1,13 +1,14 @@
 ## Purpose of script:
-`part5.model_conversion.py` converts netCDF formatted files to CSV files. This utility is not strictly necessary for the SITRUS workflow if the input tomography model files are already in .csv format.
+`part5.model_conversion.py` converts netCDF formatted files to CSV files. This utility is not strictly necessary for the SITRUS workflow if the input tomography model files are already in .csv format. **IMPORTANT: model values _must_ be given as velocities, not as percent perturbations relative to a reference model**
 
 ## Output/saved files:
 1. converts any `{model}.nc` file to `{model}.csv` file, stored in `models/{wave_type}/{model}.csv`
 
 
 ## Before running:
-1. upload a `{model}.nc` file to the appropriate `models/{wave_type}` directory, depending on type of waves the model uses.
-2. if desired, rename your file to a name you would like to use later for the `input_model` variable in `mod_input`.
+1. check if your model file includes model values given as velocities (km / s) rather than perturbations. if there are no velocity values, the model cannot be used.
+2. upload a `{model}.nc` file to the appropriate `models/{wave_type}` directory, depending on type of waves the model uses.
+3. if desired, rename your file to a name you would like to use later for the `input_model` variable in `mod_input`.
 
 
 ## Input variables to define in `mod_input.py`: 
