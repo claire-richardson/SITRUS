@@ -1,26 +1,31 @@
 import os
+import time
 import mod_geo
 import fnmatch
 import mod_input
 import mod_pandas
 import numpy as np
 import pandas as pd
+import mod_refmodels
 from obspy.taup import taup_geo
 from obspy.taup import TauPyModel
 from ellipticipy import ellipticity_correction
 
-# directories:
 phases_directory = mod_input.phases_directory
 data_directory = mod_input.data_directory
-orig_paths_directory = mod_input.orig_paths_directory
-resampled_paths_directory = mod_input.resampled_paths_directory
+# orig_paths_directory = mod_input.orig_paths_directory
+# resampled_paths_directory = mod_input.resampled_paths_directory
+paths_directory = mod_input.paths_directory
 
-## PARSE DATASET:
 try:
     os.mkdir(phases_directory)
 except:
     pass
 
+if mod_input.data_wave_type == 'S':
+    df_crust = pd.read_csv(f'{mod_input.tomography_model_directory}/crust/CRUST_1.0_vsh.csv')
+elif mod_input.data_wavey_type == 'P':
+    df_crust = pd.read_csv(f'{mod_input.tomography_model_directory}/crust/CRUST_1.0_vp.csv')
 df_data = pd.read_csv(mod_input.dataset)
 df_phases = df_data['PHASE'].unique()
 all_phases = list(df_phases)
@@ -34,8 +39,9 @@ for p in all_phases:
     try:
         os.mkdir(f'./{phases_directory}/{p}')
         os.mkdir(f'./{phases_directory}/{p}/{data_directory}')
-        os.mkdir(f'./{phases_directory}/{p}/{orig_paths_directory}')
-        os.mkdir(f'./{phases_directory}/{p}/{resampled_paths_directory}')     
+        os.mkdir(f'./{phases_directory}/{p}/{paths_directory}')
+        # os.mkdir(f'./{phases_directory}/{p}/{orig_paths_directory}')
+        # os.mkdir(f'./{phases_directory}/{p}/{resampled_paths_directory}')
         df_specific_phase = df_data[headers].copy()
         df_specific_phase['DIST'] = 0.
         df_specific_phase['ELLIP_CORR'] = 0.
@@ -48,41 +54,10 @@ for p in all_phases:
     except:
         pass
 
-## MAKE RAYPATHS:
-# define variables and files to be used:
-model = TauPyModel(model = mod_input.reference_model)
 
-print(f'START MAKING RAYPATHS')
-make_raypaths_start = time.time()
-
-if __name__ == '__main__':
-    process_list = []
-    process_idx = 0
-    for phase in mod_input.all_phases:
-        process_idx += 1
-        print(f'  - starting process {process_idx} of {len(mod_input.all_phases)}')
-
-        p = mp.Process(target = make_raypaths, args = (, ,))
-        p.start()
-        process_list.append(p)
-
-    for process in process_list:
-        process.join()
-
-make_raypaths_time = time.time() - make_raypaths_start
-print(f'FINISHED MAKING RAYPATHS; runtime: {backmapping_time / 60} minutes / {(backmapping_time / 60) / 60} hours')
-
-
-
-
-
-
-
-
-
-
-
+# define function for making raypaths and adding ellipticity corrections:
 def make_raypaths(phase):
+    start_raypaths = time.time()
     # parse phase name for multi-bounce and major arc indicators so it can be passed to TauP
     major = False
     mult = None
@@ -101,13 +76,15 @@ def make_raypaths(phase):
         phase_name = (phase.split(str(mult))[0] * mult)
     else:
         phase_name = phase
-    with open(f'./{data_directory}/{phase}/{data_directory}/{phase}_pathfile_bugs.txt', 'w') as fout:
+    with open(f'./{data_directory}/{phase}/{data_directory}/{phase}_pt2_pathfile_bugs.txt', 'w') as fout:
         fout.write(f'EQ_DEPTH,EQ_LAT,EQ_LON,STA_LAT,STA_LON,BUG\n')
     
     df_data = pd.read_csv(f'./{phases_directory}/{phase}/{data_directory}/{phase}_master_data.csv')
     path_id = 0
     for path in range(len(df_data)):
         path_2 = path + 1
+        with open(f'./{phases_directory}/{data_directory}/{phase}_pt2_make_raypaths_log.txt', 'a') as fout:
+            fout.write(f'- working on path {path_2} of {len(df_data)}\n')
         slat = df_data['STA_LAT'].iloc[path]
         slon = df_data['STA_LON'].iloc[path]
         elat = df_data['EQ_LAT'].iloc[path]
@@ -170,21 +147,23 @@ def make_raypaths(phase):
                 save = True
 
         if save == True:
-            out_path = f'./{phases_directory}/{phase}/{orig_paths_directory}/{phase}_{path_id}_{elat}_{elon}_{slat}_{slon}.csv'
+            out_path = f'./{phases_directory}/{phase}/{paths_directory}/orig_{phase}_{path_id}_{elat}_{elon}_{slat}_{slon}.csv'
             df_pathfile = df_pathfile.rename(columns = {'time': 'TIME', 'dist': 'DIST', 'depth': 'DEPTH', 'lat': 'LAT', 'lon': 'LON'})
             df_pathfile['SHELL#'] = 0
             df_pathfile['BLOCK#'] = 0
             df_pathfile['BOUND'] = 'hold'
+            # df_pathfile['CRUST_POINT'] = False
             
             # find block#, shell#, and bound type for each point in the new pathfile
             for point in range(len(df_pathfile)):
                 path_depth = df_pathfile['depth'].iloc[point]
                 path_lat = df_pathfile['lat'].iloc[point]
                 path_lon = df_pathfile['lon'].iloc[point]
-    
+
                 if path_lon >= 180.:
                     path_lon -= 360.
 
+                # add other identifying attributes
                 shell = mod_pandas.find_shell_id(path_depth)
                 block = mod_pandas.find_block_id(path_lat, path_lon)
                 bound_type = mod_pandas.find_boundary_type(path_lat, path_lon, path_depth)
@@ -206,15 +185,37 @@ def make_raypaths(phase):
 
         elif save == False:
             df_data.loc[path, 'PATH_ID'] = np.nan
-            with open(f'{data_path}{phase}{outfile_mod}_pathfile_bugs.txt', 'a') as fout:
+            with open(f'./{phases_directory}/{data_directory}/{phase}_pathfile_bugs.txt', 'a') as fout:
                 fout.write(f'{depth},{elat},{elon},{slat},{slon},{issue}\n')
 
     df_data = df_data.dropna(subset = ['PATH_ID']).reset_index(drop = True)
     df_data.to_csv(f'./{phases_directory}/{phase}/{data_directory}/{phase}_master_data.csv', index = False)
+    
+    with open(f'./{phases_directory}/{data_directory}/{phase}_pt2_make_raypaths_log.txt', 'a') as fout:
+        fout.write(f'FINISHED; total time: {(time.time() - start_raypaths) / 60 minutes; {((time.time() - start_raypaths) / 60) / 60} hours\n')
 
+## MAKE RAYPATHS:
+# define variables and files to be used:
+model = TauPyModel(model = mod_input.reference_model)
 
+print(f'START MAKING RAYPATHS')
+make_raypaths_start = time.time()
 
+if __name__ == '__main__':
+    process_list = []
+    process_idx = 0
+    for phase in mod_input.all_phases:
+        process_idx += 1
+        print(f'  - starting process {process_idx} of {len(mod_input.all_phases)}')
 
+        p = mp.Process(target = make_raypaths, args = (phase,))
+        p.start()
+        process_list.append(p)
 
+    for process in process_list:
+        process.join()
+
+make_raypaths_time = time.time() - make_raypaths_start
+print(f'FINISHED MAKING RAYPATHS; runtime: {backmapping_time / 60} minutes / {(backmapping_time / 60) / 60} hours')
 
 
