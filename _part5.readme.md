@@ -1,21 +1,20 @@
-README file for: `.py`
+## Purpose of script:
+`part5.model_conversion.py` converts netCDF formatted files to CSV files. This utility is not strictly necessary for the SITRUS workflow if the input tomography model files are already in .csv format.
+
+## Output/saved files:
+1. converts any `{model}.nc` file to `{model}.csv` file, stored in `models/{wave_type}/{model}.csv`
 
 
-PURPOSE OF SCRIPT:
-`pt3.src.make_plot_ready_files.py` makes files that can be read and plotted by the matplotlib utility Cartopy. This is achieved by further interpolating the grid registered files that are outputs of pt2 to a standardized user-defined grid.
+## Before running:
+1. upload a `{model}.nc` file to the appropriate `models/{wave_type}` directory, depending on type of waves the model uses.
+2. if desired, rename your file to a name you would like to use later for the `input_model` variable in `mod_input`.
 
 
-OUTPUT/SAVED FILES:
-    1. interpolated plot-ready files for each shell in `shell_dimensions.csv`: `./models/{wave_type}_models/{model_name}_{wave_type}/original_model_plot_files/{model_name}_shell_{shell_no}_*.csv`
+## Input variables to define in `mod_input.py`: 
+1. `input_model`: the name of the model file before the `.nc` extension.
+2. `data_wave_type`: the polarity of the waves from which the model was made (i.e., `'S'` or `'P'`.).
 
 
-BEFORE RUNNING:
-    1. define necessary variables in `mod_input.py`.
-
-
-INPUT VARIABLES TO DEFINE IN `mod_input.py`:
-    1. `input_model`: the name of the model to be re-interpolated. this should exactly match the name of original converted CSV file (e.g., `SPiRaL` for `SPiRaL.csv`).
-    2. `wave_type`: the wave type(s) (S and/or P) of the model to be re-interpolated.
-    3. `reference_lat`: the spacing between latitude lines for the re-interpolated model, which will ultimately be the plotted model. value must be a factor of 180.
-    4. `reference_lon`: the spacing between longitude lines for the re-interpolated model, which will ultimately be the plotted model. value must be a factor of 360.
-    
+## Necessary compute resources:
+1. HPC cores: 1
+2. Time allocation: Generally between several seconds and ~30 minutes, depending on the size of the model file.
