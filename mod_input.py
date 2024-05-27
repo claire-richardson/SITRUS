@@ -35,13 +35,14 @@ dataset = 'eventinfo.clean.virtual_stack.all.csv' # 'eventinfo.multi_phase_singl
 raw_headers_to_keep = ['COMPREHENSIVE_WEIGHT']
 data_wave_type = 'S' # either 'S' or 'P'
 
+
 # REFERENCE MODEL #
 reference_model = 'prem' # prem, (ak135, iasp91 eventually?)
 total_radius = 6371. # km
 core_mantle_boundary = 2891. # km
 
 
-# 3D COORDINATE SYSTEM #
+# 3D MESH DEFINITION #
 shell_bounds = [0., 24.4, 80., 160., 220., 310., 400., 490., 580., 670., 800., 900., 1000., 1100., 1200., 1300., 1400., 1500., 1600., 1700., 1800., 1900., 2000., 2100., 2200., 2300., 2400., 2500., 2600., 2700., 2800., 2891.] # km
 discontinuities = [0., 15., 24.4, 220., 400., 600., 670., 771., 2741., 2891.] # km; should include discontinuities of the reference model
 cardinal_azimuths = [0., 90., 180., 270., 360.] # degrees
@@ -59,8 +60,39 @@ final_lon = 180 # degrees; ending longitude for your coordinate system
 target_path_length = 80 # km
 target_path_length_tolerance = 5 # km
 
+
 # COVERAGE PARAMETERS #
 azimuthal_sectors = 6
+
+
+# INPUT MODEL PARAMETERES #
+input_model = 'PREM' # name of input model file
+residual_header = 'SYNTH_DT_S40RTS_dvs_1.0_5.0' #'CRUST_1.0_ELLIP_DT' #'DT' #'DT_CORR' # column name of the residual that you want to use in the data file.
+# wave_type = 'S' # 'S' or 'P' or 'SYNTH'
+delimiter = '|' # delimiter in converted model.csv file
+lat_header = 'latitude' # header in converted model.csv file
+lon_header = 'longitude' # header in converted model.csv file
+depth_header = 'depth' # header in converted model.csv file
+property_header = 'vs' # header in converted model.csv file
+# update_reference = True # True if the input model needs to be re-referenced to the reference model used for the update, e.g., PREM
+voigt = [False] #[False] [True, 'vpv', 'vph']
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -70,24 +102,15 @@ azimuthal_sectors = 6
 # crustal_model_layers = ['water', 'ice', 'upper_sediments', 'middle_sediments', 'lower_sediments', 'upper_crust', 'middle_crust', 'lower_crust', 'mantle'] # ['ice', 'water', 'soft_sediments', 'hard_sediments', 'upper_crust', 'middle_crust', 'lower_crust', 'mantle'] # 
 # crustal_correction_data_label = 'CRUST_1.0_CORR'
 
-input_model = 'PREM' # name of input model file
-residual_header = 'SYNTH_DT_S40RTS_dvs_1.0_5.0' #'CRUST_1.0_ELLIP_DT' #'DT' #'DT_CORR' # column name of the residual that you want to use in the data file.
-wave_type = 'S' # 'S' or 'P' or 'SYNTH'
-delimiter = '|' # delimiter in converted model.csv file
-lat_header = 'latitude' # header in converted model.csv file
-lon_header = 'longitude' # header in converted model.csv file
-depth_header = 'depth' # header in converted model.csv file
-property_header = 'vs' # header in converted model.csv file
-update_reference = True # True if the input model needs to be re-referenced to the reference model used for the update, e.g., PREM
-voigt = [False] #[False] [True, 'vpv', 'vph']
+
 
 
 # OUTPUT FILE PARAMETERS #
 # physical_property = 'vs'
 # segment_property_header = f'SEG_V{data_wave_type}'
 perturbation_header = 'dVs_%'
-out_property_header = 'dvs (%)'
-RMS = 'RMS_dVs'
+# out_property_header = 'dvs (%)'
+# RMS = 'RMS_dVs'
 
 
 # MODEL UPDATE LAYER STRIPPING PARAMETERS #
@@ -137,12 +160,10 @@ near_neighbors_directory = 'near_neighbors'
 block_centric_directory = 'model_block_information'
 main_headers = ['PHASE', 'EQ_LAT', 'EQ_LON', 'STA_LAT', 'STA_LON', 'EQ_DEP', 'DT']
 
+
 # rounding values
 computed_decimal_places = 10
 rounded_decimal_places = 5
-
-
-
 
 
 # dubious v
