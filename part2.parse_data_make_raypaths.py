@@ -58,6 +58,10 @@ for p in all_phases:
 
 # define function for making raypaths and adding ellipticity corrections:
 def make_raypaths(phase):
+    try:
+        os.remove(f'./{data_directory}/{phase}/{data_directory}/{phase}_pt2_pathfile_bugs.txt')
+    except:
+        pass
     start_raypaths = time.time()
     # parse phase name for multi-bounce and major arc indicators so it can be passed to TauP
     major = False
@@ -84,7 +88,7 @@ def make_raypaths(phase):
     path_id = 0
     for path in range(len(df_data)):
         path_2 = path + 1
-        with open(f'./{phases_directory}/{data_directory}/{phase}_pt2_make_raypaths_log.txt', 'a') as fout:
+        with open(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pt2_make_raypaths_log.txt', 'a') as fout:
             fout.write(f'- working on path {path_2} of {len(df_data)}\n')
         slat = df_data['STA_LAT'].iloc[path]
         slon = df_data['STA_LON'].iloc[path]
@@ -183,13 +187,13 @@ def make_raypaths(phase):
 
         elif save == False:
             df_data.loc[path, 'PATH_ID'] = np.nan
-            with open(f'./{phases_directory}/{data_directory}/{phase}_pathfile_bugs.txt', 'a') as fout:
+            with open(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pathfile_bugs.txt', 'a') as fout:
                 fout.write(f'{depth},{elat},{elon},{slat},{slon},{issue}\n')
 
     df_data = df_data.dropna(subset = ['PATH_ID']).reset_index(drop = True)
     df_data.to_csv(f'./{phases_directory}/{phase}/{data_directory}/{phase}_master_data.csv', index = False)
     
-    with open(f'./{phases_directory}/{data_directory}/{phase}_pt2_make_raypaths_log.txt', 'a') as fout:
+    with open(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pt2_make_raypaths_log.txt', 'a') as fout:
         fout.write(f'FINISHED; total time: {(time.time() - start_raypaths) / 60 minutes; {((time.time() - start_raypaths) / 60) / 60} hours\n')
 
 ## MAKE RAYPATHS:
@@ -211,6 +215,6 @@ if __name__ == '__main__':
         process.join()
 
 make_raypaths_time = time.time() - make_raypaths_start
-print(f'FINISHED MAKING RAYPATHS; runtime: {backmapping_time / 60} minutes / {(backmapping_time / 60) / 60} hours')
+print(f'FINISHED MAKING RAYPATHS; runtime: {make_raypaths_time / 60} minutes / {(make_raypaths_time / 60) / 60} hours')
 
 
