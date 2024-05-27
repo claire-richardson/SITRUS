@@ -142,21 +142,21 @@ rounded_decimal_places = 5
 
 
 # dubious v
-start_depth = shell_bounds[0]
-final_depth = shell_bounds[-1]
-end_depth = shell_bounds[-2]
+# start_depth = shell_bounds[0]
+# final_depth = shell_bounds[-1]
+# end_depth = shell_bounds[-2]
 # depth_mins = shell_bounds[:-1]
 # depth_maxs = shell_bounds[1:]
 # shell_numbers = list(range(1, len(shell_bounds)))
 
-end_lat = final_lat - reference_lat  # second to last latitude value
+# end_lat = final_lat - reference_lat  # second to last latitude value
 # total_lat = final_lat - start_lat
 # latitudes = list(range(start_lat, final_lat + reference_lat, reference_lat))
 
-end_lon = final_lon - reference_lon  # second to last longitude value
+# end_lon = final_lon - reference_lon  # second to last longitude value
 # total_lon = final_lon - start_lon
 
-lat_steps = int(total_lat / reference_lat)
+# lat_steps = int(total_lat / reference_lat)
 
 azimuthal_sector_extent = 180. / azimuthal_sectors
 
