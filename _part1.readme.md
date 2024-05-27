@@ -16,7 +16,7 @@
 
 
 ## Input variables to define in `mod_input.py`:
-1. `shell_bounds`: list of boundaries that define constant thickness depth shells. This should include the major discontinuities of the reference model (default: PREM). It should include all boundaries, including topmost and bottommost values.
+1. `shell_bounds`: list of boundaries that define constant thickness depth shells. This should include the major discontinuities of the reference model (default: PREM). It should include all boundaries, including topmost and bottommost values. **the first shell must be consistent with the crust of the reference model.**
 2. `total_radius`: total radius of the Earth according to the reference model (default: PREM)
 3. `reference_lat`: the latitudinal extent of a reference 2D block at the equator of a depth surface from which to calculate the approximate equal area of all 2D blocks in `block_dimensions.csv` (default: 2; _must be an integer factor of the total latitude of the model space_)
 4. `reference_lon`: the longitudinal extent of a reference 2D block at the equator of a depth surface from which to calculate the approximate equal area of all 2D blocks in `block_dimensions.csv` (default: 2; _must be an integer factor of the total longitude of the model space_)
