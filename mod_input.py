@@ -59,6 +59,10 @@ final_lon = 180 # degrees; ending longitude for your coordinate system
 target_path_length = 80 # km
 target_path_length_tolerance = 5 # km
 
+# COVERAGE PARAMETERS #
+azimuthal_sectors = 6
+
+
 
 # INPUT MODEL PARAMETERES #
 # crustal_model = 'CRUST_1.0' # name of crustal model to correct for
@@ -158,7 +162,7 @@ rounded_decimal_places = 5
 
 # lat_steps = int(total_lat / reference_lat)
 
-azimuthal_sector_extent = 180. / azimuthal_sectors
+# azimuthal_sector_extent = 180. / azimuthal_sectors
 
 
 
