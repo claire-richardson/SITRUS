@@ -369,15 +369,33 @@ def find_boundaries_resample(phase):
         
             df_resamp = pd.DataFrame(data = {'RAY_PARAM': p, 'START_DEPTH': start_depths, 'START_DIST': start_epidists, 'START_LAT': start_lats, 'START_LON': start_lons, 'START_SHELL#': start_shell_nos, 'START_BLOCK#': start_block_nos, 'START_TYPE': start_bound_types, 'END_DEPTH': end_depths, 'END_DIST': end_epidists, 'END_LAT': end_lats, 'END_LON': end_lons, 'END_SHELL#': end_shell_nos, 'END_BLOCK#': end_block_nos, 'END_TYPE': end_bound_types, 'AZIMUTH': azimuths, 'SEG_DIST_DEG': segment_epidists, 'SEG_DIST_KM': segment_lengths, 'SEG_TIME': segment_times, 'SEG_SHELL#': segment_shell_nos, 'SEG_BLOCK#': segment_block_nos, 'MID_DEPTH': segment_mid_depths, f'SEG_V{mod_input.data_wave_type}': segment_properties, 'LENGTH_PERCENT': percent_pathlens, 'TIME_PERCENT': percent_times, 'TIME': cumulative_times, 'DIST_DEG': cumulative_epidists, 'DIST_KM': cumulative_lengths})
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             
             ##### now, tragically, after all that, it's time to add crustal corrections.
             df_resampled_path_crust = df_resamp.loc[df_resamp['END_DEPTH'] == 0.].copy().reset_index(drop = True)
 
+            prem_crustal_model_time = 0.
             crustal_model_time = 0.
             # find the total amount of time that the path leading up to the surface point(s) spent traveling through CRUST1.0.
             for resampled_seg in range(len(df_resampled_path_crust)):
                 surface_lat = df_resampled_path_crust['END_LAT'].iloc[resampled_seg]
                 surface_lon = df_resampled_path_crust['END_LON'].iloc[resampled_seg]
+                surface_dist = df_resampled_path_crust['DIST_DEG'].iloc[resampled_seg]
                 if surface_lat == 90.:
                     df_crust_block = df_crust.loc[(df_crust['lat_max'] == 90.) & (df_crust['lon_min'] <= surface_lon) & (df_crust['lon_max'] > surface_lon)].copy().reset_index(drop = True)
                 else:
@@ -392,7 +410,12 @@ def find_boundaries_resample(phase):
                         layer_d = layer_thickness / np.cos(layer_theta)
                         layer_t = layer_d / layer_vel
 
-                        crustal_model_time += layer_t
+                        if surface_dist == df_resampled_path_crust['DIST_DEG'].iloc[-1]:
+                            crustal_model_time += layer_t
+                        else:
+                            crustal_model_time += (layer_t * 2)
+
+                        
 
             # one last check to see if the starting point is in the crust:
             path_start_depth = df_resamp['START_DEPTH'].iloc[0]
@@ -429,7 +452,6 @@ def find_boundaries_resample(phase):
 
             # then, FINALLY, add this information to the master_data.csv file.
             master_idx = df_phase_data.loc[df_phase_data['PATH_ID'] == path_id].index
-
 
 
 
