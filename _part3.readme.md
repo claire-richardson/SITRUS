@@ -14,7 +14,7 @@
 
 ## Before running:
 1. make sure that a mesh has been made using `part1.grid_definition.py`.
-2. make sure that original path files for all of the residuals in the raw dataset have been made using `part1.parse_data_make_raypaths.csv`.
+2. make sure that original path files for all of the residuals in the raw dataset have been made using `part2.parse_data_make_raypaths.py`.
 3. define necessary variables in `mod_input.py`.
 
 
