@@ -16,6 +16,7 @@ data_directory = mod_input.data_directory
 # orig_paths_directory = mod_input.orig_paths_directory
 # resampled_paths_directory = mod_input.resampled_paths_directory
 paths_directory = mod_input.paths_directory
+model = TauPyModel(model = mod_input.reference_model)
 
 try:
     os.mkdir(phases_directory)
@@ -175,9 +176,6 @@ def make_raypaths(phase):
             df_data.loc[path, 'DIST'] = df_pathfile['DIST'].iloc[-1]
             df_data.loc[path, 'ELLIP_CORR'] = round(ellip_correction, rdp)
             df_data.loc[path, 'ELLIP_DT'] = dt - (round(ellip_correction, rdp))
-            df_data.loc[path, 'CRUST_1.0_CORR'] = 0.
-            df_data.loc[path, 'CRUST_1.0_DT'] = 0.
-            df_data.loc[path, 'CRUST_1.0_ELLIP_DT'] = 0.
             df_data.loc[path, 'PATH_ID'] = int(path_id)
 
             df_pathfile.to_csv(out_path, index = False)
@@ -195,9 +193,6 @@ def make_raypaths(phase):
         fout.write(f'FINISHED; total time: {(time.time() - start_raypaths) / 60 minutes; {((time.time() - start_raypaths) / 60) / 60} hours\n')
 
 ## MAKE RAYPATHS:
-# define variables and files to be used:
-model = TauPyModel(model = mod_input.reference_model)
-
 print(f'START MAKING RAYPATHS')
 make_raypaths_start = time.time()
 
