@@ -16,12 +16,12 @@ input_csv = str(mod_input.input_model)+'.csv'
 input_nc = str(mod_input.input_model)+'.nc'
 
 
-if os.path.exists(f'./{mod_input.tomography_model_directory}/{mod_input.wave_type}/{mod_input.input_model}_update/{input_csv}') == True:
+if os.path.exists(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/{input_csv}') == True:
     print('path exists')
 else:
     # make the .csv
     print('path does not exist')
-    os.mkdir(f'./{mod_input.tomography_model_directory}/{mod_input.wave_type}/{mod_input.input_model}_update/')
+    os.mkdir(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/')
     cd(f'./{mod_input.tomography_model_directory}/')
     
     SCRIPT = os.path.basename(sys.argv[0])
@@ -266,5 +266,5 @@ else:
     make_model_geocsv()
 
     cd('../')
-    shutil.move(f'./{mod_input.tomography_model_directory}/{input_csv}', f'./{mod_input.tomography_model_directory}/{mod_input.wave_type}/{mod_input.input_model}_update/{input_csv}')
+    shutil.move(f'./{mod_input.tomography_model_directory}/{input_csv}', f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/{input_csv}')
     print('done')
