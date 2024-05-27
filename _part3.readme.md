@@ -25,6 +25,7 @@
 4. `shell_bounds`: list of boundaries that define constant thickness depth shells. **this should exactly equal the list used to generate `shell_boundaries.csv` in `part1`**.
 5. `target_path_length`: the target raypath segment length to resample the points along the raypath to (i.e., points along the raypath should be approximately `target_path_length` km apart from each other).
 8. `target_path_length_tolerance`: the tolerance for the target raypath segment length resampling routine (i.e., points along the raypath should be approximately `target_path_length` km, +/- `target_path_length_tolerance` apart from each other).
+9. `total_radius`: total radius of the Earth according to the reference model (default: PREM).
 
 
 ## Necessary compute resources:
