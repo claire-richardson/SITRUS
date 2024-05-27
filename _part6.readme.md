@@ -23,7 +23,7 @@
 5. `depth_header`: the depth header in the input `{model}.csv` file
 6. `property_header`: the velocity value header in the input `{model}.csv` file
 7. `delimiter`: the field delimiter in the input `{model}.csv` file (typically `|`)
-8. `voigt`: indication of whether or not to compute a voigt average (typically done for anisotropic models that give velocities for both horizontal and vertical components)
+8. `voigt`: indication of whether or not to compute a voigt average (typically done for anisotropic models that give velocities for both horizontal and vertical components). if voigt averaging is desired, the user must indicate the headers of the values to average.
 
 
 ## Necessary compute resources:
