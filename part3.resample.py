@@ -1,14 +1,13 @@
 ## Import libraries, modules ##
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import mod_refmodels
-import mod_input
-import mod_pandas
-import mod_geo
-import mod_boundary
 import glob
 import time
+import mod_geo
+import mod_input
+import mod_pandas
+import mod_boundary
+import numpy as np
+import pandas as pd
+import mod_refmodels
 
 cdp = mod_input.computed_decimal_places
 rdp = mod_input.rounded_decimal_places
@@ -21,12 +20,12 @@ upper_lim = target_length + target_length_tol
 crust_shell = mod_pandas.find_shell_id(75)
 
 if mod_input.data_wave_type == 'S':
-    df_crust = pd.read_csv(f'/{tomography_model_directory}/crust/CRUST_1.0_vsh.csv')
+    df_crust = pd.read_csv(f'/{mod_input.tomography_model_directory}/crust/CRUST_1.0_vsh.csv')
     vel_label = 'vs'
 if mod_input.data_wave_type == 'P':
-    df_crust = pd.read_csv(f'/{tomography_model_directory}/crust/CRUST_1.0_vp.csv')
+    df_crust = pd.read_csv(f'/{mod_input.tomography_model_directory}/crust/CRUST_1.0_vp.csv')
     vel_label = 'vp'
-    
+
 crust_cols = list(df_crust)
 crust_layers = []
 for col in crust_cols:
@@ -35,8 +34,8 @@ for col in crust_cols:
 
 def convert_velocity(seismic_velocity, depth):
     '''
-    function to convert velocity (`seismic_velocity`) from km/s to deg/s
-    
+    function to convert velocity (`seismic_velocity`) from km/s to deg/s.
+    function is total radius + depth (rather than minus) because CRUST1.0 gives depth as negative values.
     inputs:
         - `seismic_velocity`: seismic velocity in terms of km/s
         - `depth`: the depth at which the seismic velocity is computed.
@@ -44,7 +43,57 @@ def convert_velocity(seismic_velocity, depth):
     returns:
         - seismic velocity in terms of degrees/second, with the length of a degree dependent on the passed `depth`, which is used to determine the radius of the sphere at which the length of a degree is calculated.
     '''
-    return seismic_velocity / ((2 * np.pi * (mod_input.total_radius - depth)) / 360)
+    return seismic_velocity / ((2 * np.pi * (mod_input.total_radius + depth)) / 360)
+
+prem_vel_upper_crust = convert_velocity(mod_refmodels.prem_vel(mod_input.data_wave_type, 0.), 0.)
+prem_vel_lower_crust = convert_velocity(mod_refmodels.prem_vel(mod_input.data_wave_type, 15.), 15.)
+
+def prem_crust_travel_time(ray_param, depth_max):
+    if depth_max <= 15.:
+        # find the time through the upper crust layer
+        theta_uc = np.arcsin(ray_param * prem_vel_upper_crust)
+        d_uc = depth_max / np.cos(theta_uc)
+        t_uc = d_uc / mod_refmodels.prem_vel(mod_input.data_wave_type, 0.)
+        prem_crust_time = t_uc
+
+    elif depth_max > 15. and depth_max <= 24.4:
+        # find the time through the upper crust layer
+        theta_uc = np.arcsin(ray_param * prem_vel_upper_crust)
+        d_uc = 15. / np.cos(theta_uc)
+        t_uc = d_uc / mod_refmodels.prem_vel(mod_input.data_wave_type, 0.)
+        
+        # find the time through the lower crust layer
+        theta_lc = np.arcsin(ray_param * prem_vel_lower_crust)
+        d_lc = (depth_max - 15.) / np.cos(theta_lc)
+        t_lc = d_lc / mod_refmodels.prem_vel(mod_input.data_wave_type, 15.)
+        
+        # add the times from the two layers together
+        prem_crust_time = (t_uc + t_lc)
+
+    elif depth_max > 24.4:
+        # find the time through the upper crust layer
+        theta_uc = np.arcsin(ray_param * prem_vel_upper_crust)
+        d_uc = 15. / np.cos(theta_uc)
+        t_uc = d_uc / mod_refmodels.prem_vel(mod_input.data_wave_type, 0.)
+        
+        # find the time through the lower crust layer
+        theta_lc = np.arcsin(ray_param * prem_vel_lower_crust)
+        d_lc = 9.4 / np.cos(theta_lc)
+        t_lc = d_lc / mod_refmodels.prem_vel(mod_input.data_wave_type, 15.)
+        
+        # find the time through the layer that enters the mantle
+        m_thickness = depth_max - 24.4
+        m_mid_depth = (m_thickness / 2) + 24.4
+        m_prem_vel = mod_refmodels.prem_vel(mod_input.data_wave_type, m_mid_depth)
+        theta_m = np.arcsin(ray_param * convert_velocity(m_prem_vel, m_mid_depth))
+        d_m = m_thickness / np.cos(theta_m)
+        t_m = d_m / m_prem_vel
+        
+        # add the times from all of the layers together
+        prem_crust_time = (t_uc + t_lc + t_m)
+        
+    return prem_crust_time
+        
 
 ## Define functions ##
 def add_pt_info(path_len, mid_depth, p_azimuth, p_depth, p_dist, p_seg_dist, p_lat, p_lon, p_shell, p_block):
@@ -369,26 +418,10 @@ def find_boundaries_resample(phase):
         
             df_resamp = pd.DataFrame(data = {'RAY_PARAM': p, 'START_DEPTH': start_depths, 'START_DIST': start_epidists, 'START_LAT': start_lats, 'START_LON': start_lons, 'START_SHELL#': start_shell_nos, 'START_BLOCK#': start_block_nos, 'START_TYPE': start_bound_types, 'END_DEPTH': end_depths, 'END_DIST': end_epidists, 'END_LAT': end_lats, 'END_LON': end_lons, 'END_SHELL#': end_shell_nos, 'END_BLOCK#': end_block_nos, 'END_TYPE': end_bound_types, 'AZIMUTH': azimuths, 'SEG_DIST_DEG': segment_epidists, 'SEG_DIST_KM': segment_lengths, 'SEG_TIME': segment_times, 'SEG_SHELL#': segment_shell_nos, 'SEG_BLOCK#': segment_block_nos, 'MID_DEPTH': segment_mid_depths, f'SEG_V{mod_input.data_wave_type}': segment_properties, 'LENGTH_PERCENT': percent_pathlens, 'TIME_PERCENT': percent_times, 'TIME': cumulative_times, 'DIST_DEG': cumulative_epidists, 'DIST_KM': cumulative_lengths})
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            
             ##### now, tragically, after all that, it's time to add crustal corrections.
             df_resampled_path_crust = df_resamp.loc[df_resamp['END_DEPTH'] == 0.].copy().reset_index(drop = True)
-
+            ray_param_deg = (ray_param / (180. / np.pi))
+            
             prem_crustal_model_time = 0.
             crustal_model_time = 0.
             # find the total amount of time that the path leading up to the surface point(s) spent traveling through CRUST1.0.
@@ -396,26 +429,29 @@ def find_boundaries_resample(phase):
                 surface_lat = df_resampled_path_crust['END_LAT'].iloc[resampled_seg]
                 surface_lon = df_resampled_path_crust['END_LON'].iloc[resampled_seg]
                 surface_dist = df_resampled_path_crust['DIST_DEG'].iloc[resampled_seg]
+                
                 if surface_lat == 90.:
                     df_crust_block = df_crust.loc[(df_crust['lat_max'] == 90.) & (df_crust['lon_min'] <= surface_lon) & (df_crust['lon_max'] > surface_lon)].copy().reset_index(drop = True)
                 else:
                     df_crust_block = df_crust.loc[(df_crust['lat_min'] <= surface_lat) & (df_crust['lat_max'] > surface_lat) & (df_crust['lon_min'] <= surface_lon) & (df_crust['lon_max'] > surface_lon)].copy().reset_index(drop = True)
+                crust_block_depth = abs(df_crust_block['mantle_top'].iloc[0])
 
+                # find the total travel time of prem through the crust block:
+                prem_crustal_model_time += prem_crust_travel_time(ray_param_deg, crust_block_depth)
+                # find the total path travel time through CRUST1.0
                 for layer in crust_layers:
                     layer_thickness = df_crust_block[f'{layer}_thickness'].iloc[0]
-                    if layer_thickness != 0.:
-                        layer_vel = df_crust_block[f'{layer}_{vel_label}'].iloc[0]
+                    layer_vel = df_crust_block[f'{layer}_{vel_label}'].iloc[0]
+                    if layer_thickness != 0. and layer_vel != 0.:
                         layer_top = df_crust_block[f'{layer}_top'].iloc[0]
-                        layer_theta = np.arcsin(ray_param * convert_velocity(layer_vel, layer_top))
+                        layer_theta = np.arcsin(ray_param_deg * convert_velocity(layer_vel, layer_top))
                         layer_d = layer_thickness / np.cos(layer_theta)
                         layer_t = layer_d / layer_vel
 
-                        if surface_dist == df_resampled_path_crust['DIST_DEG'].iloc[-1]:
+                        if surface_dist == df_resamp['DIST_DEG'].iloc[-1]:
                             crustal_model_time += layer_t
                         else:
                             crustal_model_time += (layer_t * 2)
-
-                        
 
             # one last check to see if the starting point is in the crust:
             path_start_depth = df_resamp['START_DEPTH'].iloc[0]
@@ -430,50 +466,31 @@ def find_boundaries_resample(phase):
             if path_start_depth >= crust_block_depth:
                 pass
             else:
+                # find the total travel time of prem through the crust block:
+                prem_crustal_model_time += prem_crust_travel_time(ray_param_deg, crust_block_depth)
+                # find the total path travel time through CRUST1.0
                 for layer in crust_layers:
                     layer_thickness = df_crust_block[f'{layer}_thickness'].iloc[0]
-                    if layer_thickness != 0.:
+                    layer_vel = df_crust_block[f'{layer}_{vel_label}'].iloc[0]
+                    if layer_thickness != 0. and layer_vel != 0.:
                         layer_top = df_crust_block[f'{layer}_top'].iloc[0]
                         layer_bottom = df_crust_block[f'{layer}_top'].iloc[0] - layer_thickness
                         # if the EQ starts in this layer, start the calc. here:
                         if layer_top >= -path_start_depth > layer_bottom:
-                            layer_vel = df_crust_block[f'{layer}_{vel_label}'].iloc[0]
-                            layer_theta = np.arcsin(ray_param * convert_velocity(layer_vel, layer_top))
+                            layer_theta = np.arcsin(ray_param_deg * convert_velocity(layer_vel, layer_top))
                             layer_d = (abs(layer_bottom) - path_start_depth) / np.cos(layer_theta)
                             layer_t = layer_d / layer_vel
                             crustal_model_time += layer_t
                         elif -path_start_depth > layer_top > layer_bottom:
-                            layer_vel = df_crust_block[f'{layer}_{vel_label}'].iloc[0]
                             layer_top = df_crust_block[f'{layer}_top'].iloc[0]
-                            layer_theta = np.arcsin(ray_param * convert_velocity(layer_vel, layer_top))
+                            layer_theta = np.arcsin(ray_param_deg * convert_velocity(layer_vel, layer_top))
                             layer_d = layer_thickness / np.cos(layer_theta)
                             layer_t = layer_d / layer_vel
                             crustal_model_time += layer_t
 
             # then, FINALLY, add this information to the master_data.csv file.
             master_idx = df_phase_data.loc[df_phase_data['PATH_ID'] == path_id].index
-
-
-
-
-
-
-
-
-################################################################################
-            df_phase_data.loc[master_idx, 'CRUST_1.0_CORR'] = crustal_model_time
-################################################################################
-
-
-
-
-
-
-
-
-
-
-
+            df_phase_data.loc[master_idx, 'CRUST_1.0_CORR'] = crustal_model_time - prem_crustal_model_time
 
             h = []
             cols = df_resamp.columns
@@ -502,27 +519,13 @@ def find_boundaries_resample(phase):
             with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt3_resample_bugs.txt', 'a') as fout:
                 fout.write(f'{path}\n')
 
-
-
-
-
-
-
-################################################################
     # do this at the very very end with the whole thing finished
-    df_phase_data.loc[master_idx, 'CRUST_1.0_DT']
-    df_phase_data.loc[master_idx, 'CRUST_1.0_ELLIP_DT']
-################################################################
-
-
-
-
-
-
+    df_phase_data['CRUST_1.0_DT'] = df_phase_data['DT'] - df_phase_data['CRUST_1.0_CORR']
+    df_phase_data['CRUST_1.0_ELLIP_DT'] = df_phase_data['DT'] - df_phase_data['CRUST_1.0_CORR'] - df_phase_data['ELLIP_CORR']
+    df_phase_data.to_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_master_data.csv', index = False)
 
     with open(f'./{phases_directory}/{data_directory}/{phase}_pt3_boundary_finding_log.txt', 'a') as fout:
         fout.write(f'FINISHED; total time: {(time.time() - start_boundary_finding_time) / 60 minutes; {((time.time() - start_boundary_finding_time) / 60) / 60} hours\n')
-
 
 ## Start parallel processes:
 print(f'START FINDING BOUNDARIES AND RESAMPLING RAYPATHS')
