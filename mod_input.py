@@ -84,8 +84,8 @@ layer_base_shells = [31] # list of the bottom-most shell(s) in a given layer(s)
 freeze_previous_layers = [True] # [None, True, False]
 starting_RMS_model_to_use = input_model
 iteration_to_stop_RMS_weighting = [2] # the iteration for each layer of `n` layers on which to stop weighting backmapped perturbations by RMS weighting. a list with `n` elements, either integers or 'None'.
-variance_cutoff_type = ['total iterations'] # 'reduction' or 'total iterations'
-variance_cutoff = [10] # if 'reduction', type == float; if 'total iterations', type == int
+cutoff_type = ['total iterations'] # 'reduction' or 'total iterations'
+cutoff = [10] # if 'reduction', type == float; if 'total iterations', type == int
 # multiprocessing_path_increments = [9000] # 9000 for total dataset, 7500 for limited dataset
 HPC_cores = 32
 
@@ -94,9 +94,7 @@ HPC_cores = 32
 smoothing_radii = [[3.0, 6.0, 9.0]] # list of lists of smoothing radii for each main layer in the current update
 total_required_paths = [20] # this is the minimum number of paths that are required in the radius for smoothing
 total_required_azimuths = [2] # this is the minimum number of azimuths that are required in each azimuthal sector for smoothing
-peak_value = 1. # the value of the Gaussian at the center of the smoothing circle
-peak_center = 0. # the center of the Gaussian fn on the x-axis. The radius at which values will get the highest weight
-cutoff_weight = [0.5] # Value of the Gaussian at the smoothing cuttoff
+gaussian_cutoff_weight = [0.5] # Value of the Gaussian at the smoothing cuttoff
 azimuthal_weighting = [False] # True or False to include azimuthal weighting when computing the smoothed azimuthal pertubation mean.
 path_length_weighting = [True]
 special_weights = [['COMPREHENSIVE_WEIGHT', 'HIPR_STA_WEIGHT', 'HIPR_EQ_WEIGHT']]
@@ -110,10 +108,7 @@ shell_file = 'shell_dimensions.csv'
 block_file = 'block_dimensions.csv'
 phases_directory = 'phases'
 data_directory = 'phase_data'
-# orig_paths_directory = 'original_path_files'
-# resampled_paths_directory = 'resampled_path_files'
 backmapped_paths_directory = 'backmapped_path_files'
-# tomography_paths_directory = 'model_path_files'
 paths_directory = 'raypath_files'
 tomography_model_directory = 'models'
 near_neighbors_directory = 'near_neighbors'

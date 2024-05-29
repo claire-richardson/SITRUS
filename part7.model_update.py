@@ -51,13 +51,13 @@ def azimuthal_sector(az):
     return int(df_az_slice['ID'])
 
 # Find the standard deviation of the Gaussian function that will be used for weighting, and then define the Gaussian as a function of radius:
-def gaussian(total_R, x, cutoff_weight):
-    gaussian_numerator = ((total_R - mod_input.peak_center) ** 2.)
-    gaussian_denominator = np.log(cutoff_weight / mod_input.peak_value)
+def gaussian(total_R, x, gaussian_cutoff_weight):
+    gaussian_numerator = ((total_R) ** 2.)
+    gaussian_denominator = np.log(gaussian_cutoff_weight)
     gaussian_standard_deviation = np.sqrt((gaussian_numerator / gaussian_denominator) * -0.5)
-    exp_n = ((x - mod_input.peak_center) ** 2.)
+    exp_n = ((x) ** 2.)
     exp_d = (2 * gaussian_standard_deviation ** 2.)
-    g = mod_input.peak_value * np.exp(-(exp_n / exp_d))
+    g = np.exp(-(exp_n / exp_d))
     return g
 
 def rms(property_list):
@@ -435,7 +435,7 @@ def update_smoothing_block(shell_no):
             segment_center_lon = df_smoothing_block['CENTER_LON'].iloc[segment_id]
             
             dist_to_center = mod_geo.GCP_length(block_center_lat, block_center_lon, segment_center_lat, segment_center_lon)
-            gaus_weight = gaussian(block_smoothing_radius, dist_to_center, layer_cutoff_weight)
+            gaus_weight = gaussian(block_smoothing_radius, dist_to_center, layer_gaussian_cutoff_weight)
             df_smoothing_block.loc[segment_id, 'GAUSS_WEIGHT'] = gaus_weight
         
         df_smoothing_block.to_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}/block_{block_no}.csv', index = False)
@@ -517,7 +517,7 @@ def find_smoothing_radii(shell_no):
                 dist_to_center = mod_geo.GCP_length(element_center_lat, element_center_lon, unique_path_segment_center_lat, unique_path_segment_center_lon)
                 
                 # compute the gaussian weight for that path segment and add it to df_smoothing
-                gaus_weight = gaussian(radius, dist_to_center, layer_cutoff_weight)
+                gaus_weight = gaussian(radius, dist_to_center, layer_gaussian_cutoff_weight)
                 df_smoothing.loc[unique_path_segment, 'GAUSS_WEIGHT'] = gaus_weight
                 
         df_smoothing.to_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}/block_{block_no}.csv', index = False)
@@ -556,13 +556,13 @@ for layer_bottom_shell in mod_input.layer_base_shells:
     iteration_to_stop_RMS = mod_input.iteration_to_stop_RMS_weighting[layers_complete]
     shells_to_update = list(df_shells.loc[(df_shells['SHELL#'] >= layer_top_shell) & (df_shells['SHELL#'] <= layer_bottom_shell)]['SHELL#'])
     layer_residual_limits = mod_input.residual_limits[layers_complete]
-    layer_variance_cutoff_type = mod_input.variance_cutoff_type[layers_complete]
-    layer_variance_cutoff = mod_input.variance_cutoff[layers_complete]
+    layer_cutoff_type = mod_input.cutoff_type[layers_complete]
+    layer_cutoff = mod_input.cutoff[layers_complete]
     layer_smoothing_radii = mod_input.smoothing_radii[layers_complete]
     layer_max_radius = layer_smoothing_radii[-1]
     layer_total_required_paths = mod_input.total_required_paths[layers_complete]
     layer_total_required_azimuths = mod_input.total_required_azimuths[layers_complete]
-    layer_cutoff_weight = mod_input.cutoff_weight[layers_complete]
+    layer_gaussian_cutoff_weight = mod_input.gaussian_cutoff_weight[layers_complete]
     layer_azimuthal_weighting = mod_input.azimuthal_weighting[layers_complete]
     layer_path_length_weighting = mod_input.path_length_weighting[layers_complete]
     layer_special_weights = mod_input.special_weights[layers_complete]
@@ -589,8 +589,8 @@ for layer_bottom_shell in mod_input.layer_base_shells:
         fout.write(f"[{';'.join(str(i) for i in layer_residual_limits)}],")
         fout.write(f'{layer_depth_min} km - {layer_stripping_depth} km,')
         fout.write(f'{iteration_to_stop_RMS},')
-        fout.write(f'{layer_variance_cutoff_type},')
-        fout.write(f'{layer_variance_cutoff},')
+        fout.write(f'{layer_cutoff_type},')
+        fout.write(f'{layer_cutoff},')
         fout.write(f'{mod_input.azimuthal_sectors},')
         fout.write(f'{layer_azimuthal_weighting},')
         fout.write(f'{layer_path_length_weighting},')
@@ -598,11 +598,11 @@ for layer_bottom_shell in mod_input.layer_base_shells:
         fout.write(f"[{';'.join(str(i) for i in layer_smoothing_radii)}],")
         fout.write(f'{layer_total_required_paths},')
         fout.write(f'{layer_total_required_azimuths},')
-        fout.write(f'{layer_cutoff_weight},')
+        fout.write(f'{layer_gaussian_cutoff_weight},')
 
     else:
         with open(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/model_update_log_{model}.csv', 'w') as fout:
-            fout.write('PID,Layer,Input_model,Input_RMS,Reference_model,Dataset_description,Residual_header,Phases_used,Type_of_phase_subselection,Phase_subselection,Residual_limits,Layer_dimensions,Stopped_RMS_weighting_iteration,Variance_cutoff_type,Variance_cutoff,Azimuthal_sectors,Azimuthal_weighting,Path_length_weighting,Special_weights,Smoothing_radii,Total_required_paths,Total_required_sectors,Gaussian_cutoff_weight\n')
+            fout.write('PID,Layer,Input_model,Input_RMS,Reference_model,Dataset_description,Residual_header,Phases_used,Type_of_phase_subselection,Phase_subselection,Residual_limits,Layer_dimensions,Stopped_RMS_weighting_iteration,Cutoff_type,Cutoff,Azimuthal_sectors,Azimuthal_weighting,Path_length_weighting,Special_weights,Smoothing_radii,Total_required_paths,Total_required_sectors,Gaussian_cutoff_weight\n')
         with open(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/model_update_log_{model}.csv', 'a') as fout:
             fout.write(f'{job_id},')
             fout.write(f'{layers_complete} of {len(mod_input.layer_base_shells)},')
@@ -617,8 +617,8 @@ for layer_bottom_shell in mod_input.layer_base_shells:
             fout.write(f"[{';'.join(str(i) for i in layer_residual_limits)}],")
             fout.write(f'{layer_depth_min} km - {layer_stripping_depth} km,')
             fout.write(f'{iteration_to_stop_RMS},')
-            fout.write(f'{layer_variance_cutoff_type},')
-            fout.write(f'{layer_variance_cutoff},')
+            fout.write(f'{layer_cutoff_type},')
+            fout.write(f'{layer_cutoff},')
             fout.write(f'{mod_input.azimuthal_sectors},')
             fout.write(f'{layer_azimuthal_weighting},')
             fout.write(f'{layer_path_length_weighting},')
@@ -626,7 +626,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
             fout.write(f"[{';'.join(str(i) for i in layer_smoothing_radii)}],")
             fout.write(f'{layer_total_required_paths},')
             fout.write(f'{layer_total_required_azimuths},')
-            fout.write(f'{layer_cutoff_weight},')
+            fout.write(f'{layer_gaussian_cutoff_weight},')
 
     layer_directory = f'{update_path}/layer_{layers_complete}_shell_{layer_top_shell}_to_{layer_bottom_shell}'
     try:
@@ -724,6 +724,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
 
         # make the directory for the current layer and iteration of the model in the main model update directory if it's not already made.
         iteration_directory_path = f'{layer_directory}/iteration_{layer_iteration}'
+        previous_iteration_directory_path = f'{layer_directory}/iteration_{layer_iteration - 1}'
         try:
             os.mkdir(f'{iteration_directory_path}')
         except:
@@ -803,18 +804,17 @@ for layer_bottom_shell in mod_input.layer_base_shells:
             os.remove(f'{iteration_directory_path}/tmp_residuals_{list_index}.csv')
 
         df_residuals = df_residuals.reset_index(drop = True)
-        df_residuals.to_csv(f'{iteration_directory_path}/residuals.csv', index = False)
-        if layer_iteration == 1 and layers_complete == 1:
-            df_residuals.to_csv(f'{update_path}/{model}_starting_residuals_{job_id}.csv', index = False)
-        unexplained_diffs = df_residuals['MISFIT'].to_numpy()
+
+        if layer_iteration == 1:
+            df_residuals.to_csv(f'{layer_directory}/{model}_starting_residuals_{job_id}.csv', index = False)
+        else:
+            df_residuals.to_csv(f'{previous_iteration_directory_path}/residuals.csv', index = False)
         
+        unexplained_diffs = df_residuals['MISFIT'].to_numpy()
         unexplained_means.append(np.mean(unexplained_diffs))
         unexplained_stds.append(np.std(unexplained_diffs))
         unexplained_vars.append(np.var(unexplained_diffs))
         total_paths_itr.append(len(df_residuals))
-        
-        if layer_variance_cutoff_type == 'total iterations' and layer_variance_cutoff == 1: 
-            continue_layer_iterating = False
         
         if layer_iteration > 1:
             std1 = unexplained_stds[-1]
@@ -825,229 +825,242 @@ for layer_bottom_shell in mod_input.layer_base_shells:
             var2 = unexplained_vars[-2]
             var_diff = var2 - var1
 
-            if layer_variance_cutoff_type == 'reduction':
-                if var_diff < layer_variance_cutoff:
+            if layer_cutoff_type == 'reduction':
+                if var_diff < layer_cutoff:
                     continue_layer_iterating = False
 
-            elif layer_variance_cutoff_type == 'total iterations':
-                if layer_iteration == layer_variance_cutoff:
+            elif layer_cutoff_type == 'total iterations':
+                if layer_iteration == layer_cutoff + 1
                     continue_layer_iterating = False
 
-
+        if continue_layer_iterating == False:
             with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                fout.write(f'- Iteration #{layer_iteration}; variance: {var1}, variance difference: {var_diff}\n')
-        residual_time = time.time() - residual_start
-
-        with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-            fout.write(f'- Finished computing variance: {residual_time} seconds\n')
-        
-        with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-            fout.write(f'- * backmapping COMPLETE for all phases\n')
-            fout.write(f'- * beginning smoothing...\n')
-
-        # if this is the first iteration for the current layer, find the appropriate smoothing radius for each block based on the new block information.
-        if layer_iteration == 1:
-            with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                fout.write(f'- Start computation of smoothing radii (first iteration only)\n')
-            smoothing_radii_start = time.time()
+                fout.write(f'- Finished computing variance: {residual_time} seconds; threshold reached and layer update ended\n')
+            shutil.rmtree(iteration_directory_path)
             
+        elif continue_layer_iterating == True:
+            residual_time = time.time() - residual_start
+            with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+                fout.write(f'- Finished computing variance: {residual_time} seconds; threshold not yet reached\n')
+            
+            with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+                fout.write(f'- * backmapping COMPLETE for all phases\n')
+                fout.write(f'- * beginning smoothing...\n')
+
+            # if this is the first iteration for the current layer, find the appropriate smoothing radius for each block based on the new block information.
+            if layer_iteration == 1:
+                with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+                    fout.write(f'- Start computation of smoothing radii (first iteration only)\n')
+                smoothing_radii_start = time.time()
+                
+                try:
+                    os.mkdir(f'{layer_directory}/smoothing_block_information')
+                except:
+                    pass
+                
+                if __name__ == '__main__':
+                    find_radii_process_list = []
+                    for shell_no in shells_to_update:
+                        with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+                            fout.write(f'  - Starting process for shell {shell_no}; total: {len(shells_to_update)} shells to update\n')
+                        try:
+                            os.mkdir(f'{layer_directory}/smoothing_block_information/shell_{shell_no}')
+                        except:
+                            pass
+                        p = mp.Process(target = find_smoothing_radii, args = (shell_no,))
+                        p.start()
+                        find_radii_process_list.append(p)
+                  
+                    for find_radii_process in find_radii_process_list:
+                        find_radii_process.join()
+                
+                smoothing_radii_time = time.time() - smoothing_radii_start
+    
+                with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+                    fout.write(f'- Finished finding smoothing radii; runtime: {smoothing_radii_time / 60} minutes / {(smoothing_radii_time / 60) / 60} hours\n')
+    
+            else:
+                with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+                    fout.write(f'- Start updating smoothing blocks\n')
+                smoothing_radii_start = time.time()
+                
+                if __name__ == '__main__':
+                    smoothing_update_list = []
+                    for shell_no in shells_to_update:
+                        with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+                            fout.write(f'  - Starting process for shell {shell_no}; total: {len(shells_to_update)} shells to update\n')
+                        p = mp.Process(target = update_smoothing_block, args = (shell_no,))
+                        p.start()
+                        smoothing_update_list.append(p)
+                        
+                    for smoothing_update_process in smoothing_update_list:
+                        smoothing_update_process.join()
+    
+                smoothing_radii_time = time.time() - smoothing_radii_start
+                with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+                    fout.write(f'- Finished updating smoothing blocks; runtime: {smoothing_radii_time / 60} minutes / {(smoothing_radii_time / 60) / 60} hours\n')
+            
+        
+            # now, go directly to smoothing. loop through each block in each shell and grab the information in the shell_{shell}/block_{block} file.
+            with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+                fout.write(f'- Start model smoothing\n')
+            smoothing_start = time.time()
+            if __name__ == '__main__':
+                smoothing_process_list = []
+                for shell_no in all_shells:
+                    if shell_no in shells_to_update:
+                        with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+                            fout.write(f'  - Starting process for shell {shell_no}; total of {len(shells_to_update)} to smooth\n')
+                        p = mp.Process(target = model_smoothing, args = (shell_no,))
+                        p.start()
+                        smoothing_process_list.append(p)
+                    
+                    else:
+                        df_updated_model_shell = df_model.loc[df_model['SHELL#'] == shell_no].copy().reset_index(drop = True)
+                        df_updated_model_shell.to_csv(f'{iteration_directory_path}/{model}_updated_shell_{shell_no}.csv', index = False)
+    
+                for smoothing_process in smoothing_process_list:
+                    smoothing_process.join()
+    
+            smoothing_time = time.time() - smoothing_start
+            with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+                fout.write(f'- Finished model smoothing; runtime: {smoothing_time} seconds / {smoothing_time / 60} minutes\n')
+    
+            
+            df_model = df_model.drop(df_model.index)
+            for shell_no in all_shells:
+                df_updated_shell = pd.read_csv(f'{iteration_directory_path}/{model}_updated_shell_{shell_no}.csv')
+                df_model = pd.concat([df_model, df_updated_shell])
+                os.remove(f'{iteration_directory_path}/{model}_updated_shell_{shell_no}.csv')
+            df_model = df_model.reset_index(drop = True)
+            df_model.to_csv(f'{iteration_directory_path}/{model}_updated_model_itr_{layer_iteration}.csv', index = False)
+
+            ###############################################################################################
+            ### FINAL STEP: RESET THE BLOCK INFO FILES, DF_RMS AND DF_MODEL TO START THE NEXT ITERATION ###
+            ###############################################################################################
+            # Now, with the updated model (df_model), compute a new RMS profile
+            with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+                fout.write(f'- Resetting block info files, starting rms, and starting model for the next iteration\n')
+            rms_values = []
+            normalized_rms_values = []
+    
+            for shell_no in all_shells:
+                df_shell_rms = df_model.loc[df_model['SHELL#'] == shell_no]
+                rms_value = rms(list(df_shell_rms[out_property_header]))
+                df_rms_idx = df_rms.loc[df_rms['SHELL#'] == shell_no].index
+                df_rms.loc[df_rms_idx, RMS_header] = rms_value
+    
+            max_rms_value = df_rms[RMS_header].max()
+            df_rms[f'NORM_{RMS_header}'] = df_rms[RMS_header] / max_rms_value
+            df_rms.to_csv(f'{iteration_directory_path}/{model}_updated_rms_itr_{layer_iteration}.csv', index = False)
+    
+            # make plottable files for the current iteration of the solution model and the difference between this model and the starting model
             try:
-                os.mkdir(f'{layer_directory}/smoothing_block_information')
+                os.mkdir(f'{iteration_directory_path}/plot_files')
             except:
                 pass
+    
+            lats = np.arange(mod_input.start_lat, mod_input.final_lat, mod_input.reference_lat)
+            lons = np.arange(mod_input.start_lon, mod_input.final_lon, mod_input.reference_lon)
             
-            if __name__ == '__main__':
-                find_radii_process_list = []
-                for shell_no in shells_to_update:
-                    with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                        fout.write(f'  - Starting process for shell {shell_no}; total: {len(shells_to_update)} shells to update\n')
-                    try:
-                        os.mkdir(f'{layer_directory}/smoothing_block_information/shell_{shell_no}')
-                    except:
-                        pass
-                    p = mp.Process(target = find_smoothing_radii, args = (shell_no,))
-                    p.start()
-                    find_radii_process_list.append(p)
-              
-                for find_radii_process in find_radii_process_list:
-                    find_radii_process.join()
-            
-            smoothing_radii_time = time.time() - smoothing_radii_start
-
-            with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                fout.write(f'- Finished finding smoothing radii; runtime: {smoothing_radii_time / 60} minutes / {(smoothing_radii_time / 60) / 60} hours\n')
-
-        else:
-            with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                fout.write(f'- Start updating smoothing blocks\n')
-            smoothing_radii_start = time.time()
-            
-            if __name__ == '__main__':
-                smoothing_update_list = []
-                for shell_no in shells_to_update:
-                    with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                        fout.write(f'  - Starting process for shell {shell_no}; total: {len(shells_to_update)} shells to update\n')
-                    p = mp.Process(target = update_smoothing_block, args = (shell_no,))
-                    p.start()
-                    smoothing_update_list.append(p)
-                    
-                for smoothing_update_process in smoothing_update_list:
-                    smoothing_update_process.join()
-
-            smoothing_radii_time = time.time() - smoothing_radii_start
-            with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                fout.write(f'- Finished updating smoothing blocks; runtime: {smoothing_radii_time / 60} minutes / {(smoothing_radii_time / 60) / 60} hours\n')
-        
-        
-        # now, go directly to smoothing. loop through each block in each shell and grab the information in the shell_{shell}/block_{block} file.
-        with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-            fout.write(f'- Start model smoothing\n')
-        smoothing_start = time.time()
-        if __name__ == '__main__':
-            smoothing_process_list = []
-            for shell_no in all_shells:
-                if shell_no in shells_to_update:
-                    with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                        fout.write(f'  - Starting process for shell {shell_no}; total of {len(shells_to_update)} to smooth\n')
-                    p = mp.Process(target = model_smoothing, args = (shell_no,))
-                    p.start()
-                    smoothing_process_list.append(p)
+            for shell_to_plot in all_shells:
+                up_perturbs_file = f'{iteration_directory_path}/plot_files/{model}_shell_{shell_to_plot}_updated_perturbs_plot_ready_{job_id}.csv'
+                perturb_diffs_file = f'{iteration_directory_path}/plot_files/{model}_shell_{shell_to_plot}_perturb_diffs_plot_ready_{job_id}.csv'
+    
+                df_og_shell_data = df_original_model.loc[df_original_model['SHELL#'] == shell_to_plot]
+                df_model_shell_data = df_model.loc[df_model['SHELL#'] == shell_to_plot]
+                if layer_iteration == 1:
+                    radii_file = f'{iteration_directory_path}/plot_files/{model}_shell_{shell_to_plot}_smoothing_radii_plot_ready_{job_id}.csv'
+                    if shell_to_plot in shells_to_update:
+                        df_model_radii = pd.read_csv(f'{layer_directory}/shell_{shell_to_plot}_smoothing_radii.csv')
+                    else:
+                        df_model_radii = pd.DataFrame(columns = ['BLOCK#', 'RADIUS'])
+                        df_model_radii['BLOCK#'] = all_blocks
+                        df_model_radii['RADIUS'] = 0.
+                    df_radii = pd.DataFrame(data = {'LON': lons})
                 
-                else:
-                    df_updated_model_shell = df_model.loc[df_model['SHELL#'] == shell_no].copy().reset_index(drop = True)
-                    df_updated_model_shell.to_csv(f'{iteration_directory_path}/{model}_updated_shell_{shell_no}.csv', index = False)
-
-            for smoothing_process in smoothing_process_list:
-                smoothing_process.join()
-
-        smoothing_time = time.time() - smoothing_start
-        with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-            fout.write(f'- Finished model smoothing; runtime: {smoothing_time} seconds / {smoothing_time / 60} minutes\n')
-
-        
-        df_model = df_model.drop(df_model.index)
-        for shell_no in all_shells:
-            df_updated_shell = pd.read_csv(f'{iteration_directory_path}/{model}_updated_shell_{shell_no}.csv')
-            df_model = pd.concat([df_model, df_updated_shell])
-            # os.remove(f'{iteration_directory_path}/{model}_updated_shell_{shell_no}.csv')
-        df_model = df_model.reset_index(drop = True)
-        df_model.to_csv(f'{iteration_directory_path}/{model}_updated_model_itr_{layer_iteration}.csv', index = False)
-
-        ###############################################################################################
-        ### FINAL STEP: RESET THE BLOCK INFO FILES, DF_RMS AND DF_MODEL TO START THE NEXT ITERATION ###
-        ###############################################################################################
-        # Now, with the updated model (df_model), compute a new RMS profile
-        with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-            fout.write(f'- Resetting block info files, starting rms, and starting model for the next iteration\n')
-        rms_values = []
-        normalized_rms_values = []
-
-        for shell_no in all_shells:
-            df_shell_rms = df_model.loc[df_model['SHELL#'] == shell_no]
-            rms_value = rms(list(df_shell_rms[out_property_header]))
-            df_rms_idx = df_rms.loc[df_rms['SHELL#'] == shell_no].index
-            df_rms.loc[df_rms_idx, RMS_header] = rms_value
-
-        max_rms_value = df_rms[RMS_header].max()
-        df_rms[f'NORM_{RMS_header}'] = df_rms[RMS_header] / max_rms_value
-        df_rms.to_csv(f'{iteration_directory_path}/{model}_updated_rms_itr_{layer_iteration}.csv', index = False)
-
-        # make plottable files for the current iteration of the solution model and the difference between this model and the starting model
-        try:
-            os.mkdir(f'{iteration_directory_path}/plot_files')
-        except:
-            pass
-
-        lats = np.arange(mod_input.start_lat, mod_input.final_lat, mod_input.reference_lat)
-        lons = np.arange(mod_input.start_lon, mod_input.final_lon, mod_input.reference_lon)
-        
-        for shell_to_plot in all_shells:
-            up_perturbs_file = f'{iteration_directory_path}/plot_files/{model}_shell_{shell_to_plot}_updated_perturbs_plot_ready_{job_id}.csv'
-            perturb_diffs_file = f'{iteration_directory_path}/plot_files/{model}_shell_{shell_to_plot}_perturb_diffs_plot_ready_{job_id}.csv'
-
-            df_og_shell_data = df_original_model.loc[df_original_model['SHELL#'] == shell_to_plot]
-            df_model_shell_data = df_model.loc[df_model['SHELL#'] == shell_to_plot]
-            if layer_iteration == 1:
-                radii_file = f'{iteration_directory_path}/plot_files/{model}_shell_{shell_to_plot}_smoothing_radii_plot_ready_{job_id}.csv'
-                if shell_to_plot in shells_to_update:
-                    df_model_radii = pd.read_csv(f'{layer_directory}/shell_{shell_to_plot}_smoothing_radii.csv')
-                else:
-                    df_model_radii = pd.DataFrame(columns = ['BLOCK#', 'RADIUS'])
-                    df_model_radii['BLOCK#'] = all_blocks
-                    df_model_radii['RADIUS'] = 0.
-                df_radii = pd.DataFrame(data = {'LON': lons})
+                df_updated = pd.DataFrame(data = {'LON': lons})
+                df_differences = pd.DataFrame(data = {'LON': lons})
             
-            df_updated = pd.DataFrame(data = {'LON': lons})
-            df_differences = pd.DataFrame(data = {'LON': lons})
-            
-            # make empty lists that will be filled with numpy arrays for each latitude band, for each model.
-            up_dvs = []
-            diff_dvs = []
-            radii = []
-
-            # loop through all latitudes in the model space
-            for lat in lats:
-                # make empty lists to fill in the perturbations for the current latitude band
-                lat_up_dvs = []
-                lat_diff_dvs = []
-                lat_radii = []
-            
-                # loop through all longitudes in the model space
-                for lon in lons:
-                    # find the block that the current lat/lon pair falls in
-                    block = mod_pandas.find_block_id(lat, lon)
-                    original_perturb = float(df_og_shell_data.loc[df_og_shell_data['BLOCK#'] == block][out_property_header])
-                    updated_perturb = float(df_model_shell_data.loc[df_model_shell_data['BLOCK#'] == block][out_property_header])
-                    diff_perturb = updated_perturb - original_perturb
+                # make empty lists that will be filled with numpy arrays for each latitude band, for each model.
+                up_dvs = []
+                diff_dvs = []
+                radii = []
+    
+                # loop through all latitudes in the model space
+                for lat in lats:
+                    # make empty lists to fill in the perturbations for the current latitude band
+                    lat_up_dvs = []
+                    lat_diff_dvs = []
+                    lat_radii = []
+                
+                    # loop through all longitudes in the model space
+                    for lon in lons:
+                        # find the block that the current lat/lon pair falls in
+                        block = mod_pandas.find_block_id(lat, lon)
+                        original_perturb = float(df_og_shell_data.loc[df_og_shell_data['BLOCK#'] == block][out_property_header])
+                        updated_perturb = float(df_model_shell_data.loc[df_model_shell_data['BLOCK#'] == block][out_property_header])
+                        diff_perturb = updated_perturb - original_perturb
+                        if layer_iteration == 1:
+                            radius = int(df_model_radii.loc[df_model_radii['BLOCK#'] == block]['RADIUS']) - 0.1
+                            lat_radii.append(radius)
+                        
+                        lat_up_dvs.append(updated_perturb)
+                        lat_diff_dvs.append(diff_perturb)
+                    
+                    up_dvs.append(np.array(lat_up_dvs))
+                    diff_dvs.append(np.array(lat_diff_dvs))
+                    
+                    df_updated[f'{lat}'] = lat_up_dvs
+                    df_differences[f'{lat}'] = lat_diff_dvs
+    
                     if layer_iteration == 1:
-                        radius = int(df_model_radii.loc[df_model_radii['BLOCK#'] == block]['RADIUS']) - 0.1
-                        lat_radii.append(radius)
-                    
-                    lat_up_dvs.append(updated_perturb)
-                    lat_diff_dvs.append(diff_perturb)
-                
-                up_dvs.append(np.array(lat_up_dvs))
-                diff_dvs.append(np.array(lat_diff_dvs))
-                
-                df_updated[f'{lat}'] = lat_up_dvs
-                df_differences[f'{lat}'] = lat_diff_dvs
+                        radii.append(np.array(lat_radii))
+                        df_radii[f'{lat}'] = lat_radii
+        
+                df_updated.to_csv(up_perturbs_file, index = False)
+                df_differences.to_csv(perturb_diffs_file, index = False)
 
                 if layer_iteration == 1:
-                    radii.append(np.array(lat_radii))
-                    df_radii[f'{lat}'] = lat_radii
+                    df_radii.to_csv(radii_file, index = False)
     
-            df_updated.to_csv(up_perturbs_file, index = False)
-            df_differences.to_csv(perturb_diffs_file, index = False)
+            iteration_time = time.time() - iteration_start
 
-            if layer_iteration == 1:
-                df_radii.to_csv(radii_file, index = False)
-
-        iteration_time = time.time() - iteration_start
-
-        # with open(f'{iteration_directory_path}/{model}_update_info.txt', 'w') as fout:
-        with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-            fout.write(f'total time for iteration: {iteration_time / 60} minutes / {iteration_time / 60 / 60} hours\n')
-            fout.write(f'total time for backmapping & converting from path to block format: {backmapping_time / 60} minutes / {(backmapping_time / 60) / 60} hours\n')
-            fout.write(f'total time for merging all temporary block information into main block files: {merge_time / 60} minutes\n')
-            fout.write(f'total time for compiling all unexplained differences and computing variance: {residual_time / 60} minutes\n')
-            fout.write(f'total time for finding smoothing radii, Gaussian weights, and saving smoothing files OR updating smoothing files: {smoothing_radii_time / 60} minutes / {(smoothing_radii_time / 60) / 60} hours\n')
-            fout.write(f'total time for smoothing: {smoothing_time / 60} minutes\n')
-            fout.write(f'mean time for backmapping per path (total paths: {tot_paths}): {backmapping_time / tot_paths} seconds\n')
-            fout.write(f'mean time for smoothing per shell: {smoothing_time / len(shells_to_update)} seconds\n')
-            fout.write(f'mean time for smoothing per block: {(smoothing_time / len(shells_to_update)) / len(all_blocks)} seconds\n')
-            fout.write(f'mean misfit (dataset residual - predicted residual): {unexplained_means[-1]} seconds \n')
-            fout.write(f'misfit standard deviation: {unexplained_stds[-1]}\n')
-            fout.write(f'misfit variance: {unexplained_vars[-1]}\n\n\n\n')
-
-        
+            with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+                fout.write(f'total time for iteration: {iteration_time / 60} minutes / {iteration_time / 60 / 60} hours\n')
+                fout.write(f'total time for backmapping & converting from path to block format: {backmapping_time / 60} minutes / {(backmapping_time / 60) / 60} hours\n')
+                fout.write(f'total time for merging all temporary block information into main block files: {merge_time / 60} minutes\n')
+                fout.write(f'total time for compiling all unexplained differences and computing variance: {residual_time / 60} minutes\n')
+                fout.write(f'total time for finding smoothing radii, Gaussian weights, and saving smoothing files OR updating smoothing files: {smoothing_radii_time / 60} minutes / {(smoothing_radii_time / 60) / 60} hours\n')
+                fout.write(f'total time for smoothing: {smoothing_time / 60} minutes\n')
+                fout.write(f'mean time for backmapping per path (total paths: {tot_paths}): {backmapping_time / tot_paths} seconds\n')
+                fout.write(f'mean time for smoothing per shell: {smoothing_time / len(shells_to_update)} seconds\n')
+                fout.write(f'mean time for smoothing per block: {(smoothing_time / len(shells_to_update)) / len(all_blocks)} seconds\n')
+                # fout.write(f'mean misfit (dataset residual - predicted residual): {unexplained_means[-1]} seconds \n')
+                # fout.write(f'misfit standard deviation: {unexplained_stds[-1]}\n')
+                # fout.write(f'misfit variance: {unexplained_vars[-1]}\n\n\n\n')
+            
         for phase in phases_to_update:
             shutil.rmtree(f'./{mod_input.phases_directory}/{phase}/{mod_input.backmapped_paths_directory}_{job_id}')
 
     # this level is where a model will just have completed a full set of iterations and crossed the variance threshold. save here (df_model and df_rms) for individual layers.
     for list_index in range(len(paths_lists)):
         shutil.rmtree(f'{layer_directory}/tmp_block_info_idx_{list_index}') ## LAYER STRIPPING DEBUG
-    
-    df_layer_variance = pd.DataFrame(data = {'layer': layers_complete, 'iteration': list(range(1, len(unexplained_means) + 1, 1)), 'total_paths': total_paths_itr, 'misfit_mean': unexplained_means, 'misfit_std': unexplained_stds, 'misfit_var': unexplained_vars})
+
+    # merge all smoothing block files:
+    df_smoothing_radii_master = pd.DataFrame(columns = ['SHELL#', 'BLOCK#', 'RADIUS'])
+    for shell in shells_to_update:
+        shell_list = []
+        df_shell_smoothing = pd.read_csv(f'{layer_directory}/shell_{shell}_smoothing_radii.csv')
+        for i in range(len(df_shell_smoothing['BLOCK#'])):
+            shell_list.append(shell)
+        df_shell_smoothing.insert(0, 'SHELL#', shell_list)
+        df_smoothing_radii_master = pd.concat([df_smoothing_radii_master, df_shell_smoothing])
+        os.remove(f'{layer_directory}/shell_{shell}_smoothing_radii.csv')
+    df_smoothing_radii_master.to_csv(f'{layer_directory}/smoothing_radii.csv', index = False)
+
+    # df_layer_variance = pd.DataFrame(data = {'layer': layers_complete, 'iteration': list(range(1, len(unexplained_means) + 1, 1)), 'total_paths': total_paths_itr, 'misfit_mean': unexplained_means, 'misfit_std': unexplained_stds, 'misfit_var': unexplained_vars})
+    df_layer_variance = pd.DataFrame(data = {'layer': layers_complete, 'iteration': list(range(0, len(unexplained_means) + 1, 1)), 'total_paths': total_paths_itr, 'misfit_mean': unexplained_means, 'misfit_std': unexplained_stds, 'misfit_var': unexplained_vars})
     df_variance = pd.concat([df_variance, df_layer_variance])
     df_variance = df_variance.reset_index(drop = True)
     
