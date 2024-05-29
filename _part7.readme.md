@@ -1,10 +1,9 @@
 ## Purpose of script:
-`part6.model_grid_registration.py` registers the input model to the 3D mesh made in `part1` via linearly interpolating the eight nearest model values to each 3D block node. It converts the velocity values in the input model to percent perturbation relative to the reference model (default: PREM). Finally, it computes a radial RMS profile for the perturbation values in each depth shell.
+`part7.model_update` actually performs the iterative model update.
 
 
 ## Output/saved files:
-1. `models/{data_wave_type}/{model}_update/{model}_grid_registered.csv`: the newly interpolated model, ready to be used for the model update.
-2. `models/{data_wave_type}/{model}_update/{model}_RMS_{perturb}.csv`: the RMS(perturb) profile of the model.
+1. `
 
 
 ## Before running:
@@ -28,4 +27,4 @@
 
 ## Necessary compute resources:
 1. HPC cores: 1
-2. Time allocation: Generally about an hour
+2. Time allocation: Between several hours and up to a week or more, depending on the input parameters chosen.

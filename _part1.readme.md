@@ -25,7 +25,7 @@
 7. `start_lon`: the longitude from which to start defining the 2D block dimensions (default: -180)
 8. `final_lon`: the latitude at which to stop defining the 2D block dimensions (default: 180)
 9. `make_near_neighbors_files`: boolean indicating whether to make near neighbors files (default: True; **warning**: this will increase the walltime to ~several hours)
-10. `max_near_neighbors_radius`: the total radius at which a neighboring block is considered a "near neighbor" (default: 15)
+10. `max_near_neighbors_radius`: the total radius at which a neighboring block is considered a "near neighbor" (default: 15). Choose this number carefully, as it will be the maximum radius to which you can smooth during the adaptive smoothing process in a model update.
 
 
 ## Necessary compute resources:

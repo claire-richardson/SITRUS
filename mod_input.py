@@ -72,52 +72,22 @@ voigt = [False] #[False] [True, 'vpv', 'vph']
 
 
 ## MODEL UPDATE PARAMETERS
-residual_header = 'CRUST_1.0_ELLIP_DT' # column name of the residual that you want to use in the data file.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# INPUT MODEL PARAMETERES #
-# crustal_model = 'CRUST_1.0' # name of crustal model to correct for
-# crustal_model_increment = 1
-# crustal_model_layers = ['water', 'ice', 'upper_sediments', 'middle_sediments', 'lower_sediments', 'upper_crust', 'middle_crust', 'lower_crust', 'mantle'] # ['ice', 'water', 'soft_sediments', 'hard_sediments', 'upper_crust', 'middle_crust', 'lower_crust', 'mantle'] # 
-# crustal_correction_data_label = 'CRUST_1.0_CORR'
-# wave_type = 'S' # 'S' or 'P' or 'SYNTH'
-# update_reference = True # True if the input model needs to be re-referenced to the reference model used for the update, e.g., PREM
-
-
-# OUTPUT FILE PARAMETERS #
-# physical_property = 'vs'
-# segment_property_header = f'SEG_V{data_wave_type}'
-perturbation_header = 'dVs_%'
-# out_property_header = 'dvs (%)'
-# RMS = 'RMS_dVs'
-
-
-# MODEL UPDATE LAYER STRIPPING PARAMETERS #
-update_phases = [['S3_vs', 'ScS_vs', 'ScSScS_vs', 'Sdiff_vs', 'S_vs', 'SSm_vs', 'ScS4_vs', 'ScS3_vs', 'S4m_vs', 'S3m_vs', 'ScS5m_vs', 'S5m_vs', 'ScS3m_vs', 'ScS5_vs', 'S6m_vs', 'ScS4m_vs', 'SS_vs', 'S4_vs', 'S5_vs', 'S', 'SS', 'SSS', 'ScS', 'ScSScS', 'Sdiff', 'SSSm_mb', 'ScSScSScS_mb', 'ScSScSScSScS_mb', 'SSSSm_mb', 'SSSSSm_mb', 'ScSScSScSScSScS_mb', 'SSSSSSm_mb', 'ScSScSScSScSm_mb']] # [['ScS_vs', 'ScSScS_vs', 'S_vs', 'SS_vs', 'S', 'SS', 'SSS', 'ScS', 'ScSScS']] #
+dataset_description = ['Hongyu both papers'] # DONT USE COMMAS!
+update_phases = [['S3_vs', 'ScS_vs', 'ScSScS_vs', 'Sdiff_vs', 'S_vs', 'SSm_vs', 'ScS4_vs', 'ScS3_vs', 'S4m_vs', 'S3m_vs', 'ScS5m_vs', 'S5m_vs', 'ScS3m_vs', 'ScS5_vs', 'S6m_vs', 'ScS4m_vs', 'SS_vs', 'S4_vs', 'S5_vs', 'S', 'SS', 'SSS', 'ScS', 'ScSScS', 'Sdiff', 'SSSm_mb', 'ScSScSScS_mb', 'ScSScSScSScS_mb', 'SSSSm_mb', 'SSSSSm_mb', 'ScSScSScSScSScS_mb', 'SSSSSSm_mb', 'ScSScSScSScSm_mb']]
 # list of lists of phases to include in the model update. include name modifier. the number and order of lists must match the number and order of layers.
+type_of_phase_subselection = ['proportion'] # 'proportion' or 'number'
+subselection_of_phase_data_to_use = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
+residual_header = ['CRUST_1.0_ELLIP_DT'] # column name of the residual that you want to use in the data file.
 residual_limits = [[False]] #[[False]] or [[True, lower_lim, upper_lim]] argument for whether or not there are limits imposed on residual values. # list of lists should be the same length as the number of layers
-layer_stripping_top_shells = [2] # list of the top-most shell(s) in a given layer(s)
-layer_stripping_base_shells = [31] # list of the bottom-most shell(s) in a given layer(s)
+layer_top_shells = [2] # list of the top-most shell(s) in a given layer(s)
+layer_base_shells = [31] # list of the bottom-most shell(s) in a given layer(s)
 freeze_previous_layers = [True] # [None, True, False]
+starting_RMS_model_to_use = input_model
 iteration_to_stop_RMS_weighting = [2] # the iteration for each layer of `n` layers on which to stop weighting backmapped perturbations by RMS weighting. a list with `n` elements, either integers or 'None'.
 variance_cutoff_type = ['total iterations'] # 'reduction' or 'total iterations'
 variance_cutoff = [10] # if 'reduction', type == float; if 'total iterations', type == int
-proportion_of_dataset_to_use = [1] #.5
-multiprocessing_path_increments = [9000] # 9000 for total dataset, 7500 for limited dataset
+# multiprocessing_path_increments = [9000] # 9000 for total dataset, 7500 for limited dataset
+HPC_cores = 32
 
 
 # SMOOTHING PARAMETERS #
@@ -128,7 +98,8 @@ peak_value = 1. # the value of the Gaussian at the center of the smoothing circl
 peak_center = 0. # the center of the Gaussian fn on the x-axis. The radius at which values will get the highest weight
 cutoff_weight = [0.5] # Value of the Gaussian at the smoothing cuttoff
 azimuthal_weighting = [False] # True or False to include azimuthal weighting when computing the smoothed azimuthal pertubation mean.
-hipr_weighting = [True] # True or False to include HIPR (JGR 2021) weights when computing the final weighted average perturbation.
+path_length_weighting = [True]
+special_weights = [['COMPREHENSIVE_WEIGHT', 'HIPR_STA_WEIGHT', 'HIPR_EQ_WEIGHT']]
 
 
 ############################
@@ -153,27 +124,6 @@ main_headers = ['PHASE', 'EQ_LAT', 'EQ_LON', 'STA_LAT', 'STA_LON', 'EQ_DEP', 'DT
 # rounding values
 computed_decimal_places = 10
 rounded_decimal_places = 5
-
-
-# dubious v
-# start_depth = shell_bounds[0]
-# final_depth = shell_bounds[-1]
-# end_depth = shell_bounds[-2]
-# depth_mins = shell_bounds[:-1]
-# depth_maxs = shell_bounds[1:]
-# shell_numbers = list(range(1, len(shell_bounds)))
-
-# end_lat = final_lat - reference_lat  # second to last latitude value
-# total_lat = final_lat - start_lat
-# latitudes = list(range(start_lat, final_lat + reference_lat, reference_lat))
-
-# end_lon = final_lon - reference_lon  # second to last longitude value
-# total_lon = final_lon - start_lon
-
-# lat_steps = int(total_lat / reference_lat)
-
-# azimuthal_sector_extent = 180. / azimuthal_sectors
-
 
 
 
