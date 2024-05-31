@@ -18,6 +18,7 @@ data_directory = mod_input.data_directory
 # resampled_paths_directory = mod_input.resampled_paths_directory
 paths_directory = mod_input.paths_directory
 model = TauPyModel(model = mod_input.reference_model)
+rdp = mod_input.rounded_decimal_places
 
 try:
     os.mkdir(phases_directory)
@@ -45,6 +46,7 @@ for p in all_phases:
         # os.mkdir(f'./{phases_directory}/{p}/{orig_paths_directory}')
         # os.mkdir(f'./{phases_directory}/{p}/{resampled_paths_directory}')
         df_specific_phase = df_data[headers].copy()
+        df_specific_phase = df_specific_phase.loc[df_specific_phase['PHASE'] == p]
         df_specific_phase['DIST'] = 0.
         df_specific_phase['ELLIP_CORR'] = 0.
         df_specific_phase['ELLIP_DT'] = 0.
@@ -67,6 +69,7 @@ def make_raypaths(phase):
     # parse phase name for multi-bounce and major arc indicators so it can be passed to TauP
     major = False
     mult = None
+    depth_ph = False
     for letter in phase:
         try:
             mult = int(letter)
@@ -74,15 +77,25 @@ def make_raypaths(phase):
             pass
         if letter == 'm':
             major = True
-    # if the phase is multi-bounce and major arc:
+        if letter == 's':
+            depth_ph = True
     if mult != None and major == True:
-        phase_name = (phase.split(str(mult))[0] * mult) + 'm'
+        if depth_ph == True:
+            phase_name = phase.split('s')[-1].split(str(mult))[0] * mult + 'm'
+            phase_name = f's{phase_name}'
+        else:
+            phase_name = (phase.split(str(mult))[0] * mult) + 'm'
     # if the phase is not multi-bounce but is major arc
     elif mult != None and major == False:
-        phase_name = (phase.split(str(mult))[0] * mult)
-    else:
+        if depth_ph == True:
+            phase_name = phase.split('s')[-1].split(str(mult))[0] * mult
+            phase_name = f's{phase_name}'
+        else:
+            phase_name = (phase.split(str(mult))[0] * mult)
+    else:            
         phase_name = phase
-    with open(f'./{data_directory}/{phase}/{data_directory}/{phase}_pt2_pathfile_bugs.txt', 'w') as fout:
+    
+    with open(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pt2_pathfile_bugs.txt', 'w') as fout:
         fout.write(f'EQ_DEPTH,EQ_LAT,EQ_LON,STA_LAT,STA_LON,BUG\n')
     
     df_data = pd.read_csv(f'./{phases_directory}/{phase}/{data_directory}/{phase}_master_data.csv')
@@ -162,9 +175,9 @@ def make_raypaths(phase):
             
             # find block#, shell#, and bound type for each point in the new pathfile
             for point in range(len(df_pathfile)):
-                path_depth = df_pathfile['depth'].iloc[point]
-                path_lat = df_pathfile['lat'].iloc[point]
-                path_lon = df_pathfile['lon'].iloc[point]
+                path_depth = df_pathfile['DEPTH'].iloc[point]
+                path_lat = df_pathfile['LAT'].iloc[point]
+                path_lon = df_pathfile['LON'].iloc[point]
 
                 if path_lon >= 180.:
                     path_lon -= 360.
@@ -195,7 +208,7 @@ def make_raypaths(phase):
     df_data.to_csv(f'./{phases_directory}/{phase}/{data_directory}/{phase}_master_data.csv', index = False)
     
     with open(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pt2_make_raypaths_log.txt', 'a') as fout:
-        fout.write(f'FINISHED; total time: {(time.time() - start_raypaths) / 60 minutes; {((time.time() - start_raypaths) / 60) / 60} hours\n')
+        fout.write(f'FINISHED; total time: {(time.time() - start_raypaths) / 60} minutes; {((time.time() - start_raypaths) / 60) / 60} hours\n')
 
 ## MAKE RAYPATHS:
 print(f'START MAKING RAYPATHS')
