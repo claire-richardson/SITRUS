@@ -2,7 +2,7 @@ import multiprocessing as mp
 import mod_refmodels
 import pandas as pd
 import numpy as np
-import mod_pandas
+import mod_database
 import mod_input
 import mod_geo
 import random
@@ -91,7 +91,7 @@ try:
             # loop through all longitudes in the model space
             for lon in np.arange(mod_input.start_lon, mod_input.final_lon, mod_input.reference_lon):
                 # find the block that the current lat/lon pair falls in
-                block = mod_pandas.find_block_id(lat, lon)
+                block = mod_database.find_block_id(lat, lon)
                 original_perturb = float(df_og_shell_data.loc[df_og_shell_data['BLOCK#'] == block][out_property_header])
                 lat_og_dvs.append(original_perturb)
             og_dvs.append(np.array(lat_og_dvs))
@@ -547,8 +547,8 @@ layers_complete = 0
 for layer_bottom_shell in mod_input.layer_base_shells:
     layer_start = time.time()
     layer_top_shell = mod_input.layer_top_shells[layers_complete]
-    layer_stripping_depth = mod_pandas.get_shell_info(layer_bottom_shell)[3]
-    layer_depth_min = mod_pandas.get_shell_info(layer_top_shell)[1]
+    layer_stripping_depth = mod_database.get_shell_info(layer_bottom_shell)[3]
+    layer_depth_min = mod_database.get_shell_info(layer_top_shell)[1]
     freeze_previous_layer = mod_input.freeze_previous_layers[layers_complete]
     phases_to_update = mod_input.update_phases[layers_complete]
     type_of_data_subselection = mod_input.type_of_phase_subselection[layers_complete]
@@ -997,7 +997,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
                     # loop through all longitudes in the model space
                     for lon in lons:
                         # find the block that the current lat/lon pair falls in
-                        block = mod_pandas.find_block_id(lat, lon)
+                        block = mod_database.find_block_id(lat, lon)
                         original_perturb = float(df_og_shell_data.loc[df_og_shell_data['BLOCK#'] == block][out_property_header])
                         updated_perturb = float(df_model_shell_data.loc[df_model_shell_data['BLOCK#'] == block][out_property_header])
                         diff_perturb = updated_perturb - original_perturb

@@ -23,7 +23,6 @@
 
 import math
 import mod_input
-# import mod_pandas
 import mod_database
 import mod_geo
 

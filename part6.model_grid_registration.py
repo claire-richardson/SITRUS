@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import mod_input
 import mod_geo
-import mod_pandas
+import mod_database
 import mod_refmodels
 import netCDF4
 import glob
@@ -125,7 +125,7 @@ tomog_lon_maxs = []
 for band in lat_bands:
     blocks = df_blocks.loc[df_blocks['LAT_BAND_ID'] == band]['BLOCK#']
     for block in blocks:
-        block_info = mod_pandas.get_block_info(block)
+        block_info = mod_database.get_block_info(block)
         center_lat = block_info[6]
         center_lon = block_info[7]
         coord_block_ids.append(block_info[0])
@@ -164,7 +164,7 @@ center_depths = []
 top_depths = []
 bottom_depths = []
 for shell in shell_ids:
-    shell_info = mod_pandas.get_shell_info(shell)
+    shell_info = mod_database.get_shell_info(shell)
     center_depth = shell_info[2]
     top_depth = float(df_model_depths.loc[(df_model_depths['depth_min'] <= center_depth) & (df_model_depths['depth_max'] > center_depth)]['depth_min'])
     bottom_depth = float(df_model_depths.loc[(df_model_depths['depth_min'] <= center_depth) & (df_model_depths['depth_max'] > center_depth)]['depth_max'])

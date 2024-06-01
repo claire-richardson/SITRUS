@@ -20,10 +20,10 @@ lower_lim = target_length - target_length_tol
 upper_lim = target_length + target_length_tol
 
 if mod_input.data_wave_type == 'S':
-    df_crust = pd.read_csv(f'/{mod_input.tomography_model_directory}/crust/CRUST_1.0_vsh.csv')
+    df_crust = pd.read_csv(f'./{mod_input.tomography_model_directory}/crust/CRUST_1.0_vsh.csv')
     vel_label = 'vs'
 if mod_input.data_wave_type == 'P':
-    df_crust = pd.read_csv(f'/{mod_input.tomography_model_directory}/crust/CRUST_1.0_vp.csv')
+    df_crust = pd.read_csv(f'./{mod_input.tomography_model_directory}/crust/CRUST_1.0_vp.csv')
     vel_label = 'vp'
 
 crust_cols = list(df_crust)

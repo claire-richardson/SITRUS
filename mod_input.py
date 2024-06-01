@@ -24,7 +24,7 @@
 
 # PHASE AND DATA NAMING #
 phase = 'SS'
-phases_full = ['S3_vs', 'ScS_vs', 'ScSScS_vs', 'Sdiff_vs', 'S_vs', 'SSm_vs', 'ScS4_vs', 'ScS3_vs', 'S4m_vs', 'S3m_vs', 'ScS5m_vs', 'S5m_vs', 'ScS3m_vs', 'ScS5_vs', 'S6m_vs', 'ScS4m_vs', 'SS_vs', 'S4_vs', 'S5_vs', 'S', 'SS', 'SSS', 'ScS', 'ScSScS', 'Sdiff', 'SSSm_mb', 'ScSScSScS_mb', 'ScSScSScSScS_mb', 'SSSSm_mb', 'SSSSSm_mb', 'ScSScSScSScSScS_mb', 'SSSSSSm_mb', 'ScSScSScSScSm_mb']
+all_phases = ['S3_vs', 'ScS_vs', 'ScSScS_vs', 'Sdiff_vs', 'S_vs', 'SSm_vs', 'ScS4_vs', 'ScS3_vs', 'S4m_vs', 'S3m_vs', 'ScS5m_vs', 'S5m_vs', 'ScS3m_vs', 'ScS5_vs', 'S6m_vs', 'ScS4m_vs', 'SS_vs', 'S4_vs', 'S5_vs', 'S', 'SS', 'SSS', 'ScS', 'ScSScS', 'Sdiff', 'SSSm_mb', 'ScSScSScS_mb', 'ScSScSScSScS_mb', 'SSSSm_mb', 'SSSSSm_mb', 'ScSScSScSScSScS_mb', 'SSSSSSm_mb', 'ScSScSScSScSm_mb']
 
 # INPUT DATA FILES #
 dataset = 'eventinfo.clean.virtual_stack.all.csv' # 'eventinfo.multi_phase_single_pick.csv' #'eventinfo.comprehensive.6phase.Nov15.2019.csv'
