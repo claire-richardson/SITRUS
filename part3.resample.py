@@ -3,7 +3,7 @@ import glob
 import time
 import mod_geo
 import mod_input
-import mod_pandas
+import mod_database
 import mod_boundary
 import numpy as np
 import pandas as pd
@@ -18,7 +18,6 @@ target_length = mod_input.target_path_length
 target_length_tol = mod_input.target_path_length_tolerance
 lower_lim = target_length - target_length_tol
 upper_lim = target_length + target_length_tol
-crust_shell = mod_pandas.find_shell_id(75)
 
 if mod_input.data_wave_type == 'S':
     df_crust = pd.read_csv(f'/{mod_input.tomography_model_directory}/crust/CRUST_1.0_vsh.csv')
@@ -102,10 +101,10 @@ def add_pt_info(path_len, mid_depth, p_azimuth, p_depth, p_dist, p_seg_dist, p_l
     physical_property = mod_refmodels.prem_vel(mod_input.data_wave_type, mid_depth)
     seg_time = path_len / physical_property
     time = seg_time + cumulative_times[-1]
-    p_bound_type = mod_pandas.find_boundary_type(p_lat, p_lon, p_depth)
+    p_bound_type = mod_database.find_boundary_type(p_lat, p_lon, p_depth)
     mid_pt = mod_geo.pt_from_dist(p_azimuth, pt_lats[-1], pt_lons[-1], (p_seg_dist / 2))
-    seg_shell = mod_pandas.find_shell_id(mid_depth)
-    seg_block = mod_pandas.find_block_id(mid_pt[0], mid_pt[1])
+    seg_shell = mod_database.find_shell_id(mid_depth)
+    seg_block = mod_database.find_block_id(mid_pt[0], mid_pt[1])
     pt_depths.append(p_depth)
     pt_epidists.append(p_dist)
     pt_lats.append(p_lat)
@@ -204,9 +203,9 @@ def find_boundaries_resample(phase):
                     pi_lat = inflection_info[2]
                     pi_lon = inflection_info[3]
                     pi_depth = mod_geo.new_depth(ps_depth, pr_depth, ps_epidist, pr_epidist, pi_epidist)
-                    pi_shell = mod_pandas.find_shell_id(pi_depth)
-                    pi_block = mod_pandas.find_block_id(pi_lat, pi_lon)
-                    pi_bound_type = mod_pandas.find_boundary_type(pi_lat, pi_lon, pi_depth)
+                    pi_shell = mod_database.find_shell_id(pi_depth)
+                    pi_block = mod_database.find_block_id(pi_lat, pi_lon)
+                    pi_bound_type = mod_database.find_boundary_type(pi_lat, pi_lon, pi_depth)
                     # add the new attributes to the original taup_path pair (in between them in the lists) to be included in boundary finding
                     point_depths = [ps_depth, pi_depth, pr_depth]
                     point_epidists = [ps_epidist, pi_epidist, pr_epidist]

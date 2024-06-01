@@ -10,7 +10,7 @@
 # package. The three main functions compute a new point to be added to the raypath, wherever
 # the raypath crosses a block boundary in the mesh defined by the first part of the SITRUS
 # software. The fourth function resamples the path to specifications defined in
-# `mod_input.py`. The functions in this module also depend on `mod_pandas.py` and
+# `mod_input.py`. The functions in this module also depend on `mod_database.py` and
 # `mod_geo.py`.
 #
 # the functions in this module include: 
@@ -23,7 +23,8 @@
 
 import math
 import mod_input
-import mod_pandas
+# import mod_pandas
+import mod_database
 import mod_geo
 
 depth_bounds = mod_input.shell_bounds
@@ -61,7 +62,7 @@ def different_shell_same_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
             add_boundary_info = False
         else:
             add_boundary_info = True
-            ref_shell_info = mod_pandas.get_shell_info(bound)
+            ref_shell_info = mod_database.get_shell_info(bound)
             bound_depth = ref_shell_info[1]
             if downgoing == True:
                 bound_ratio = (bound_depth - depth1) / (depth2 - depth1)
@@ -71,7 +72,7 @@ def different_shell_same_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
             bound_pt = mod_geo.pt_from_dist(az, lat1, lon1, (delta_dist * bound_ratio))
             bound_lat = bound_pt[0]
             bound_lon = bound_pt[1]
-            bound_type = mod_pandas.find_boundary_type(bound_lat, bound_lon, bound_depth)
+            bound_type = mod_database.find_boundary_type(bound_lat, bound_lon, bound_depth)
         if add_boundary_info == True:
             bd_depths.append(round(bound_depth, cdp))
             bd_dists.append(round(bound_dist, cdp))
@@ -102,8 +103,8 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
     bd_blocks = []
     bd_types = []
 
-    block1_info = mod_pandas.get_block_info(block1)
-    block2_info = mod_pandas.get_block_info(block2)
+    block1_info = mod_database.get_block_info(block1)
+    block2_info = mod_database.get_block_info(block2)
     band1 = block1_info[1]
     band2 = block2_info[1]
 
@@ -119,7 +120,7 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
                 break
             # if it doesn't cross a pole, find the longitude boundary
             else:
-                ref_block_info = mod_pandas.get_block_info(ref_block)
+                ref_block_info = mod_database.get_block_info(ref_block)
                 # if the path is heading east
                 if 0. < round(az, rdp) < 180.:
                     bound_lon = ref_block_info[5]
@@ -129,11 +130,11 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
                     # if lon2 is on the found longitude boundary, break (special case).
                     if round(lon2, rdp) == round(bound_pt[1], rdp):
                         break
-                    bound_block = mod_pandas.slice_block_mins(ref_block_info[2], ref_block_info[5])
+                    bound_block = mod_database.slice_block_mins(ref_block_info[2], ref_block_info[5])
                     ref_block = bound_block
                     bound_dist = dist1 + mod_geo.GCP_length(lat1, lon1, bound_pt[0], bound_pt[1])
                     bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, bound_dist)
-                    bound_type = mod_pandas.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
+                    bound_type = mod_database.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
                     bd_depths.append(round(bound_depth, cdp))
                     bd_dists.append(round(bound_dist, cdp))
                     bd_lats.append(round(bound_pt[0], cdp))
@@ -153,7 +154,7 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
                     bound_block = ref_block
                     bound_dist = dist1 + mod_geo.GCP_length(lat1, lon1, bound_pt[0], bound_pt[1])
                     bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, bound_dist)
-                    bound_type = mod_pandas.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
+                    bound_type = mod_database.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
                     bd_depths.append(round(bound_depth, cdp))
                     bd_dists.append(round(bound_dist, cdp))
                     bd_lats.append(round(bound_pt[0], cdp))
@@ -162,9 +163,9 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
                     bd_blocks.append(bound_block)
                     bd_types.append(bound_type)
                     if ref_block_info[4] == -180.:
-                        ref_block = mod_pandas.slice_block_min_max(ref_block_info[2], 180.)
+                        ref_block = mod_database.slice_block_min_max(ref_block_info[2], 180.)
                     else:
-                        ref_block = mod_pandas.slice_block_min_max(ref_block_info[2], ref_block_info[4])
+                        ref_block = mod_database.slice_block_min_max(ref_block_info[2], ref_block_info[4])
                 # next iteration for while loop
                 ref_lat = bound_pt[0]
                 ref_lon = bound_pt[1]
@@ -189,8 +190,8 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
         lat_ref_lon = lon1
         # begin loops
         for band in lat_bands:
-            lat_ref_block = mod_pandas.slice_block_band_lon(band, lat_ref_lon)
-            lat_ref_block_info = mod_pandas.get_block_info(lat_ref_block)
+            lat_ref_block = mod_database.slice_block_band_lon(band, lat_ref_lon)
+            lat_ref_block_info = mod_database.get_block_info(lat_ref_block)
             lat_ref_lon_min = lat_ref_block_info[4]
             lat_ref_lon_max = lat_ref_block_info[5]
             # if the path is going directly south
@@ -200,7 +201,7 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
                 if lat_ref_block == block2 or (round(lat_bound_pt[0], rdp) == round(lat1, rdp) and round(lat_bound_pt[1], rdp) == round(lon1, rdp)):
                     add_lat_boundary = False
                 else:
-                    lat_bound_block = mod_pandas.find_block_id(lat_bound_pt[0], lat_bound_pt[1])
+                    lat_bound_block = mod_database.find_block_id(lat_bound_pt[0], lat_bound_pt[1])
                     lat_bound_dist = dist1 + (lat1 - lat_bound_pt[0])                
                     lat_bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, lat_bound_dist)
                     lat_bound_shell = shell1
@@ -212,7 +213,7 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
                 if round(lat_bound_pt[0], rdp) >= round(lat2, rdp):
                     add_lat_boundary = False
                 else:
-                    lat_bound_block = mod_pandas.find_block_id(lat_bound_pt[0], lat_bound_pt[1])
+                    lat_bound_block = mod_database.find_block_id(lat_bound_pt[0], lat_bound_pt[1])
                     lat_bound_dist = dist1 + (abs(lat1 - lat_bound_pt[0]))
                     lat_bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, lat_bound_dist)
                     lat_bound_shell = shell1
@@ -225,10 +226,10 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
             # if the latitude reference point is also on a longitude line (accounts for corners)
             elif round(lat_ref_lon, rdp) == round(lat_ref_lon_min, rdp) and 180. < round(az, rdp) < 360.:
                 if lat_ref_lon_min == -180.:
-                    test_block = mod_pandas.slice_block_min_max(lat_ref_block_info[2], 180.)
+                    test_block = mod_database.slice_block_min_max(lat_ref_block_info[2], 180.)
                 else:
-                    test_block = mod_pandas.slice_block_min_max(lat_ref_block_info[2], lat_ref_lon_min)
-                test_block_info = mod_pandas.get_block_info(test_block)
+                    test_block = mod_database.slice_block_min_max(lat_ref_block_info[2], lat_ref_lon_min)
+                test_block_info = mod_database.get_block_info(test_block)
                 if block2 == test_block:
                     lon_check = False
                     add_lat_boundary = False
@@ -256,7 +257,7 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
                         else:
                             add_lat_boundary = True
                             lat_bound_pt = mod_geo.known_lat(az, lat1, lon1, lat_bound_lat)
-                    lat_bound_block = mod_pandas.slice_block_min_mid(lat_bound_pt[0], lat_bound_pt[1])
+                    lat_bound_block = mod_database.slice_block_min_mid(lat_bound_pt[0], lat_bound_pt[1])
                     lat_bound_shell = shell1
                     lat_bound_dist = dist1 + mod_geo.GCP_length(lat1, lon1, lat_bound_pt[0], lat_bound_pt[1])
                     lat_bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, lat_bound_dist)
@@ -283,7 +284,7 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
                             add_lat_boundary = True
                             lat_bound_pt = mod_geo.known_lat(az, lat1, lon1, lat_bound_lat)
                     if add_lat_boundary == True:
-                        lat_bound_block = mod_pandas.slice_block_min_mid(lat_bound_pt[0], lat_bound_pt[1])
+                        lat_bound_block = mod_database.slice_block_min_mid(lat_bound_pt[0], lat_bound_pt[1])
                         lat_bound_shell = shell1
                         lat_bound_dist = dist1 + mod_geo.GCP_length(lat1, lon1, lat_bound_pt[0], lat_bound_pt[1])
                         lat_bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, lat_bound_dist)
@@ -303,16 +304,16 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
                 # longitude boundary to the east (path is eastbound)
                 if 0. < round(az, rdp) < 180.:
                     while True:
-                        ref_block_info = mod_pandas.get_block_info(ref_block)
+                        ref_block_info = mod_database.get_block_info(ref_block)
                         if (round(ref_block_info[4], rdp) <= round(lat_bound_pt[1], rdp) <= round(ref_block_info[5], rdp)) or (ref_block_info[5] == 180. and round(lat_bound_pt[1], rdp) == -180.):
                             break
                         else:
                             bound_pt = mod_geo.known_lon(az, lat1, lon1, ref_block_info[5])
-                            bound_block = mod_pandas.find_block_id(bound_pt[0], bound_pt[1])
+                            bound_block = mod_database.find_block_id(bound_pt[0], bound_pt[1])
                             ref_block = bound_block
                             bound_dist = dist1 + mod_geo.GCP_length(lat1, lon1, bound_pt[0], bound_pt[1])
                             bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, bound_dist)
-                            bound_type = mod_pandas.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
+                            bound_type = mod_database.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
                             bd_depths.append(round(bound_depth, cdp))
                             bd_dists.append(round(bound_dist, cdp))
                             bd_lats.append(round(bound_pt[0], cdp))
@@ -326,16 +327,16 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
                 # longitude boundary to the west (path is westbound)
                 elif 180. < round(az, rdp) < 360.:
                     while True:
-                        ref_block_info = mod_pandas.get_block_info(ref_block)
+                        ref_block_info = mod_database.get_block_info(ref_block)
                         if round(ref_block_info[4], rdp) <= round(lat_bound_pt[1], rdp) < round(ref_block_info[5], rdp):
                             break
                         else:
                             bound_pt = mod_geo.known_lon(az, lat1, lon1, ref_block_info[4])
                             bound_block = ref_block
-                            ref_block = mod_pandas.slice_block_min_max(ref_block_info[2], ref_block_info[4])
+                            ref_block = mod_database.slice_block_min_max(ref_block_info[2], ref_block_info[4])
                             bound_dist = dist1 + mod_geo.GCP_length(lat1, lon1, bound_pt[0], bound_pt[1])
                             bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, bound_dist)
-                            bound_type = mod_pandas.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
+                            bound_type = mod_database.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
                             bd_depths.append(round(bound_depth, cdp))
                             bd_dists.append(round(bound_dist, cdp))
                             bd_lats.append(round(bound_pt[0], cdp))
@@ -347,7 +348,7 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
                             ref_lon = bound_pt[1]
             # add the latitude boundary
             if add_lat_boundary == True:
-                lat_bound_type = mod_pandas.find_boundary_type(lat_bound_pt[0], lat_bound_pt[1], lat_bound_depth)
+                lat_bound_type = mod_database.find_boundary_type(lat_bound_pt[0], lat_bound_pt[1], lat_bound_depth)
                 bd_depths.append(round(lat_bound_depth, cdp))
                 bd_dists.append(round(lat_bound_dist, cdp))
                 bd_lats.append(round(lat_bound_pt[0], cdp))
@@ -395,8 +396,8 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
     init_lat = lat1
     init_lon = lon1
     for depth_band in depth_bands:
-        init_shell_info = mod_pandas.get_shell_info(depth_band)
-        init_block_info = mod_pandas.get_block_info(init_block)
+        init_shell_info = mod_database.get_shell_info(depth_band)
+        init_block_info = mod_database.get_block_info(init_block)
         # if the path is downgoing and the last point is in depth bounds, AND this is the last loop
         # check if there is a block boundary between
         if downgoing == True and 'Z' in type2 and depth_band == depth_bands[-1]:
@@ -433,7 +434,7 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
             if downgoing == True:                
                 depth_boundary_depth = init_shell_info[3]
                 depth_boundary_ratio = (depth_boundary_depth - depth1) / (depth2 - depth1)
-                depth_boundary_shell = mod_pandas.slice_shell_top(depth_boundary_depth)
+                depth_boundary_shell = mod_database.slice_shell_top(depth_boundary_depth)
             elif upgoing == True:
                 depth_boundary_depth = init_shell_info[1]
                 depth_boundary_ratio = (depth1 - depth_boundary_depth) / (depth1 - depth2)
@@ -447,7 +448,7 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                 depth_boundary_block = init_block
                 block_check = False
             else:
-                depth_boundary_block = mod_pandas.find_block_id(depth_boundary_lat, depth_boundary_lon)
+                depth_boundary_block = mod_database.find_block_id(depth_boundary_lat, depth_boundary_lon)
                 block_check = True
             shell_bound_info = [depth_boundary_depth, depth_boundary_dist, depth_boundary_lat, depth_boundary_lon, depth_boundary_shell, depth_boundary_block]
 
@@ -457,8 +458,8 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                 add_shell_boundary = True
 
         if block_check == True:
-            block1_info = mod_pandas.get_block_info(init_block)
-            block2_info = mod_pandas.get_block_info(depth_boundary_block)
+            block1_info = mod_database.get_block_info(init_block)
+            block2_info = mod_database.get_block_info(depth_boundary_block)
             band1 = block1_info[1]
             band2 = block2_info[1]
 
@@ -474,7 +475,7 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                         break
                     # if it doesn't cross a pole, find the longitude boundary
                     else:
-                        ref_block_info = mod_pandas.get_block_info(ref_block)
+                        ref_block_info = mod_database.get_block_info(ref_block)
                         # if the path is heading east
                         if 0. < round(az, rdp) < 180.:
                             bound_lon = ref_block_info[5]
@@ -484,12 +485,12 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                             # if the shell boundary lon is on the found longitude boundary, break (special case).
                             if round(depth_boundary_lon, rdp) == round(bound_pt[1], rdp):
                                 break   
-                            bound_block = mod_pandas.slice_block_mins(ref_block_info[2], ref_block_info[5])
+                            bound_block = mod_database.slice_block_mins(ref_block_info[2], ref_block_info[5])
                             ref_block = bound_block
                             bound_dist = dist1 + mod_geo.GCP_length(lat1, lon1, bound_pt[0], bound_pt[1])
                             bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, bound_dist)
-                            bound_shell = mod_pandas.find_shell_id(bound_depth)
-                            bound_type = mod_pandas.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
+                            bound_shell = mod_database.find_shell_id(bound_depth)
+                            bound_type = mod_database.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
                             bd_depths.append(round(bound_depth, cdp))
                             bd_dists.append(round(bound_dist, cdp))
                             bd_lats.append(round(bound_pt[0], cdp))
@@ -509,8 +510,8 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                             bound_block = ref_block
                             bound_dist = dist1 + mod_geo.GCP_length(lat1, lon1, bound_pt[0], bound_pt[1])
                             bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, bound_dist)
-                            bound_shell = mod_pandas.find_shell_id(bound_depth)
-                            bound_type = mod_pandas.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
+                            bound_shell = mod_database.find_shell_id(bound_depth)
+                            bound_type = mod_database.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
                             bd_depths.append(round(bound_depth, cdp))
                             bd_dists.append(round(bound_dist, cdp))
                             bd_lats.append(round(bound_pt[0], cdp))
@@ -519,9 +520,9 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                             bd_blocks.append(bound_block)
                             bd_types.append(bound_type)
                             if ref_block_info[4] == -180.:
-                                ref_block = mod_pandas.slice_block_min_max(ref_block_info[2], 180.)
+                                ref_block = mod_database.slice_block_min_max(ref_block_info[2], 180.)
                             else:
-                                ref_block = mod_pandas.slice_block_min_max(ref_block_info[2], ref_block_info[4])
+                                ref_block = mod_database.slice_block_min_max(ref_block_info[2], ref_block_info[4])
                         # next iteration for while loop
                         ref_lat = bound_pt[0]
                         ref_lon = bound_pt[1]
@@ -546,8 +547,8 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                 lat_ref_lon = init_lon
                 # begin loops
                 for band in lat_bands:
-                    lat_ref_block = mod_pandas.slice_block_band_lon(band, lat_ref_lon)
-                    lat_ref_block_info = mod_pandas.get_block_info(lat_ref_block)
+                    lat_ref_block = mod_database.slice_block_band_lon(band, lat_ref_lon)
+                    lat_ref_block_info = mod_database.get_block_info(lat_ref_block)
                     lat_ref_lon_min = lat_ref_block_info[4]
                     lat_ref_lon_max = lat_ref_block_info[5]
                     # if the path is going directly south
@@ -557,10 +558,10 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                         if lat_ref_block == block2 or (round(lat_bound_pt[0], rdp) == round(lat1, rdp) and round(lat_bound_pt[1], rdp) == round(lon1, rdp)):
                             add_lat_boundary = False
                         else:
-                            lat_bound_block = mod_pandas.find_block_id(lat_bound_pt[0], lat_bound_pt[1])
+                            lat_bound_block = mod_database.find_block_id(lat_bound_pt[0], lat_bound_pt[1])
                             lat_bound_dist = dist1 + (lat1 - lat_bound_pt[0])                
                             lat_bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, lat_bound_dist)
-                            lat_bound_shell = mod_pandas.find_shell_id(lat_bound_depth)
+                            lat_bound_shell = mod_database.find_shell_id(lat_bound_depth)
                             add_lat_boundary = True
                     # if the path is going directly north
                     elif round(az, rdp) == 0.:
@@ -569,10 +570,10 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                         if round(lat_bound_pt[0], rdp) >= round(depth_boundary_lat, rdp):
                             add_lat_boundary = False
                         else:
-                            lat_bound_block = mod_pandas.find_block_id(lat_bound_pt[0], lat_bound_pt[1])
+                            lat_bound_block = mod_database.find_block_id(lat_bound_pt[0], lat_bound_pt[1])
                             lat_bound_dist = dist1 + (abs(lat1 - lat_bound_pt[0]))
                             lat_bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, lat_bound_dist)
-                            lat_bound_shell = mod_pandas.find_shell_id(lat_bound_depth)
+                            lat_bound_shell = mod_database.find_shell_id(lat_bound_depth)
                             add_lat_boundary = True
                     # if the path is going south and the code is in the first band and the first point is on the bottom of the lat band    
                     elif band1 > band2 and band == lat_bands[0] and round(lat_ref_lat, rdp) == round(lat_ref_block_info[2], rdp):    
@@ -582,10 +583,10 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                     # if the latitude reference point is also on a longitude line (accounts for corners)
                     elif round(lat_ref_lon, rdp) == round(lat_ref_lon_min, rdp) and 180. < round(az, rdp) < 360.:
                         if lat_ref_lon_min == -180.:
-                            test_block = mod_pandas.slice_block_min_max(lat_ref_block_info[2], 180.)
+                            test_block = mod_database.slice_block_min_max(lat_ref_block_info[2], 180.)
                         else:
-                            test_block = mod_pandas.slice_block_min_max(lat_ref_block_info[2], lat_ref_lon_min)
-                        test_block_info = mod_pandas.get_block_info(test_block)
+                            test_block = mod_database.slice_block_min_max(lat_ref_block_info[2], lat_ref_lon_min)
+                        test_block_info = mod_database.get_block_info(test_block)
                         if depth_boundary_block == test_block:
                             lon_check = False
                             add_lat_boundary = False
@@ -613,10 +614,10 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                                 else:
                                     add_lat_boundary = True
                                     lat_bound_pt = mod_geo.known_lat(az, lat1, lon1, lat_bound_lat)
-                            lat_bound_block = mod_pandas.slice_block_min_mid(lat_bound_pt[0], lat_bound_pt[1])
+                            lat_bound_block = mod_database.slice_block_min_mid(lat_bound_pt[0], lat_bound_pt[1])
                             lat_bound_dist = dist1 + mod_geo.GCP_length(lat1, lon1, lat_bound_pt[0], lat_bound_pt[1])
                             lat_bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, lat_bound_dist)
-                            lat_bound_shell = mod_pandas.find_shell_id(lat_bound_depth)
+                            lat_bound_shell = mod_database.find_shell_id(lat_bound_depth)
                             if round(test_block_info[4], rdp) <= round(lat_bound_pt[1], rdp) < round(test_block_info[5], rdp):
                                 lon_check = False
                             else:
@@ -643,10 +644,10 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                                     lat_bound_pt = mod_geo.known_lat(az, lat1, lon1, lat_bound_lat)
 
                             if add_lat_boundary == True:
-                                lat_bound_block = mod_pandas.slice_block_min_mid(lat_bound_pt[0], lat_bound_pt[1])
+                                lat_bound_block = mod_database.slice_block_min_mid(lat_bound_pt[0], lat_bound_pt[1])
                                 lat_bound_dist = dist1 + mod_geo.GCP_length(lat1, lon1, lat_bound_pt[0], lat_bound_pt[1])
                                 lat_bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, lat_bound_dist)
-                                lat_bound_shell = mod_pandas.find_shell_id(lat_bound_depth)
+                                lat_bound_shell = mod_database.find_shell_id(lat_bound_depth)
                         elif band == band2:
                             lat_bound_pt = [depth_boundary_lat, depth_boundary_lon]
                             add_lat_boundary = False
@@ -663,17 +664,17 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                         ref_lon = lat_ref_lon
                         if 0. < round(az, rdp) < 180.:
                             while True:
-                                ref_block_info = mod_pandas.get_block_info(ref_block)
+                                ref_block_info = mod_database.get_block_info(ref_block)
                                 if (round(ref_block_info[4], rdp) <= round(lat_bound_pt[1], rdp) <= round(ref_block_info[5], rdp)) or (ref_block_info[5] == 180. and round(lat_bound_pt[1], rdp) == -180.):
                                     break
                                 else:
                                     bound_pt = mod_geo.known_lon(az, lat1, lon1, ref_block_info[5])
-                                    bound_block = mod_pandas.find_block_id(bound_pt[0], bound_pt[1])
+                                    bound_block = mod_database.find_block_id(bound_pt[0], bound_pt[1])
                                     ref_block = bound_block
                                     bound_dist = dist1 + mod_geo.GCP_length(lat1, lon1, bound_pt[0], bound_pt[1])
                                     bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, bound_dist)
-                                    bound_type = mod_pandas.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
-                                    bound_shell = mod_pandas.find_shell_id(bound_depth)
+                                    bound_type = mod_database.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
+                                    bound_shell = mod_database.find_shell_id(bound_depth)
                                     bd_depths.append(round(bound_depth, cdp))
                                     bd_dists.append(round(bound_dist, cdp))
                                     bd_lats.append(round(bound_pt[0], cdp))
@@ -687,17 +688,17 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                         # longitude boundary to the west (path is westbound)
                         elif 180. < round(az, rdp) < 360.:
                             while True:
-                                ref_block_info = mod_pandas.get_block_info(ref_block)
+                                ref_block_info = mod_database.get_block_info(ref_block)
                                 if round(ref_block_info[4], rdp) <= round(lat_bound_pt[1], rdp) < round(ref_block_info[5], rdp):
                                     break
                                 else:
                                     bound_pt = mod_geo.known_lon(az, lat1, lon1, ref_block_info[4])
                                     bound_block = ref_block
-                                    ref_block = mod_pandas.slice_block_min_max(ref_block_info[2], ref_block_info[4])
+                                    ref_block = mod_database.slice_block_min_max(ref_block_info[2], ref_block_info[4])
                                     bound_dist = dist1 + mod_geo.GCP_length(lat1, lon1, bound_pt[0], bound_pt[1])
                                     bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, bound_dist)
-                                    bound_type = mod_pandas.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
-                                    bound_shell = mod_pandas.find_shell_id(bound_depth)
+                                    bound_type = mod_database.find_boundary_type(bound_pt[0], bound_pt[1], bound_depth)
+                                    bound_shell = mod_database.find_shell_id(bound_depth)
                                     bd_depths.append(round(bound_depth, cdp))
                                     bd_dists.append(round(bound_dist, cdp))
                                     bd_lats.append(round(bound_pt[0], cdp))
@@ -709,7 +710,7 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                                     ref_lon = bound_pt[1]    
                     # add the latitude boundary
                     if add_lat_boundary == True:
-                        lat_bound_type = mod_pandas.find_boundary_type(lat_bound_pt[0], lat_bound_pt[1], lat_bound_depth)
+                        lat_bound_type = mod_database.find_boundary_type(lat_bound_pt[0], lat_bound_pt[1], lat_bound_depth)
                         bd_depths.append(round(lat_bound_depth, cdp))
                         bd_dists.append(round(lat_bound_dist, cdp))
                         bd_lats.append(round(lat_bound_pt[0], cdp))
@@ -720,7 +721,7 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                     lat_ref_lat = lat_bound_pt[0]
                     lat_ref_lon = lat_bound_pt[1]
         if add_shell_boundary == True:
-            bound_type = mod_pandas.find_boundary_type(shell_bound_info[2], shell_bound_info[3], shell_bound_info[0])
+            bound_type = mod_database.find_boundary_type(shell_bound_info[2], shell_bound_info[3], shell_bound_info[0])
             bd_depths.append(round(shell_bound_info[0], cdp))
             bd_dists.append(round(shell_bound_info[1], cdp))
             bd_lats.append(round(shell_bound_info[2], cdp))
@@ -757,8 +758,8 @@ def resample(target_len, path_len, az, delta_dist, p1_depth, p1_dist, p1_lat, p1
         new_depth = p1_depth - seg_depth
     elif p1_depth == p2_depth:
         new_depth = p1_depth
-    new_shell = mod_pandas.find_shell_id(new_depth)
-    new_block = mod_pandas.find_block_id(new_lat, new_lon)
+    new_shell = mod_database.find_shell_id(new_depth)
+    new_block = mod_database.find_block_id(new_lat, new_lon)
     midpoint_depth = mod_geo.midpt_depth(p1_depth, new_depth)
     new_dist = p1_dist + seg_dist
     return [seg_extent, midpoint_depth, new_depth, new_dist, seg_dist, new_lat, new_lon, new_shell, new_block]

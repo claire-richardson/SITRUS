@@ -3,7 +3,7 @@ import time
 import mod_geo
 import fnmatch
 import mod_input
-import mod_pandas
+import mod_database
 import numpy as np
 import pandas as pd
 import mod_refmodels
@@ -25,10 +25,6 @@ try:
 except:
     pass
 
-if mod_input.data_wave_type == 'S':
-    df_crust = pd.read_csv(f'{mod_input.tomography_model_directory}/crust/CRUST_1.0_vsh.csv')
-elif mod_input.data_wavey_type == 'P':
-    df_crust = pd.read_csv(f'{mod_input.tomography_model_directory}/crust/CRUST_1.0_vp.csv')
 df_data = pd.read_csv(mod_input.dataset)
 df_phases = df_data['PHASE'].unique()
 all_phases = list(df_phases)
@@ -183,9 +179,9 @@ def make_raypaths(phase):
                     path_lon -= 360.
 
                 # add other identifying attributes
-                shell = mod_pandas.find_shell_id(path_depth)
-                block = mod_pandas.find_block_id(path_lat, path_lon)
-                bound_type = mod_pandas.find_boundary_type(path_lat, path_lon, path_depth)
+                shell = mod_database.find_shell_id(path_depth)
+                block = mod_database.find_block_id(path_lat, path_lon)
+                bound_type = mod_database.find_boundary_type(path_lat, path_lon, path_depth)
 
                 df_pathfile.loc[point, 'SHELL#'] = shell
                 df_pathfile.loc[point, 'BLOCK#'] = block
