@@ -33,7 +33,7 @@ elif mod_input.data_wave_type == 'P':
 # df_model will update with each iteration
 df_original_model = pd.read_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/{model}_grid_registered.csv')
 df_model = pd.read_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/{model}_grid_registered.csv')
-df_rms = pd.read_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.starting_RMS_model_to_use}_update/{mod_input.starting_RMS_model_to_use}_{RMS_header}.csv')
+df_rms = pd.read_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.starting_RMS_model_to_use}_update/{mod_input.starting_RMS_model_to_use}_RMS.csv')
 
 # compute azimuthal sector extents and define a dataframe with those attributes and sector ids (df_sectors)
 df_sectors = pd.DataFrame(columns = ['ID', 'MIN', 'MAX'])
@@ -117,7 +117,7 @@ def backmap_residual(lists_of_paths, list_idx):
     for list_of_paths in lists_of_paths:
         phase = str(list_of_paths[0].split('/')[2])
         phase_name = str(phase.split('_')[0])
-        df_data = pd.read_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_master_data.csv')
+        df_data = pd.read_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_master_data.csv')
         
         for path in list_of_paths:
             backmap = True
