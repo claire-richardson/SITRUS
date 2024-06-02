@@ -240,7 +240,7 @@ mid_depths = list(df_shells['DEPTH_MID'])
 for shell in shells[1:]:
     df_update_slice = df_interp.loc[df_interp['SHELL#'] == shell].copy()
     update_mid_depth = float(df_shells.loc[df_shells['SHELL#'] == shell]['DEPTH_MID'])
-    update_ref_val = mod_refmodels.prem_val(mod_input.data_wave_type, update_mid_depth)
+    update_ref_val = mod_refmodels.prem_vel(mod_input.data_wave_type, update_mid_depth)
 
     for b in range(len(df_update_slice)):
         block = df_update_slice['BLOCK#'].iloc[b]
@@ -277,7 +277,7 @@ for val in r:
 
 # save the rms file
 df_rms = pd.DataFrame(data = {'SHELL#': s, RMS_header: r, f'NORM_{RMS_header}': n})
-np.savetxt(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/{mod_input.input_model}_{RMS_header}.csv', df_rms, fmt = f'%i,%1.{cdp}f,%1.{cdp}f', delimiter = ',', header = f'SHELL#,{RMS_header},NORM_{RMS_header}', comments = '')
+np.savetxt(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/{mod_input.input_model}_RMS.csv', df_rms, fmt = f'%i,%1.{cdp}f,%1.{cdp}f', delimiter = ',', header = f'SHELL#,{RMS_header},NORM_{RMS_header}', comments = '')
 
 
 # save the interpolated file
