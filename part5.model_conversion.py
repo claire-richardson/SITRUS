@@ -17,10 +17,9 @@ input_nc = str(mod_input.input_model)+'.nc'
 
 
 if os.path.exists(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/{input_csv}') == True:
-    print('path exists')
+    pass
 else:
     # make the .csv
-    print('path does not exist')
     os.mkdir(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/')
     cd(f'./{mod_input.tomography_model_directory}/')
     
@@ -267,4 +266,10 @@ else:
 
     cd('../')
     shutil.move(f'./{mod_input.tomography_model_directory}/{input_csv}', f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/{input_csv}')
-    print('done')
+
+    # now that the model is converted, remove all of the comments at the beginning of the file
+    df_model = pd.read_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/{input_csv}', sep = '|', comment = '#')
+    df_model.to_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/{input_csv}', index = False)
+    
+
+

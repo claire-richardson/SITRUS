@@ -24,11 +24,12 @@
 
 # PHASE AND DATA NAMING #
 phase = 'SS'
-all_phases = ['S3_vs', 'ScS_vs', 'ScSScS_vs', 'Sdiff_vs', 'S_vs', 'SSm_vs', 'ScS4_vs', 'ScS3_vs', 'S4m_vs', 'S3m_vs', 'ScS5m_vs', 'S5m_vs', 'ScS3m_vs', 'ScS5_vs', 'S6m_vs', 'ScS4m_vs', 'SS_vs', 'S4_vs', 'S5_vs', 'S', 'SS', 'SSS', 'ScS', 'ScSScS', 'Sdiff', 'SSSm_mb', 'ScSScSScS_mb', 'ScSScSScSScS_mb', 'SSSSm_mb', 'SSSSSm_mb', 'ScSScSScSScSScS_mb', 'SSSSSSm_mb', 'ScSScSScSScSm_mb']
+all_phases = ['S', 'SS', 'SSS', 'SSSm', 'ScS2', 'ScS3', 'ScS', 'SSm', 'SSSSm', 'sSS', 'sScS2', 'sS', 'sSSSSm', 'sSSSm', 'sScS3', 'sScS', 'sSSS', 'sSSm']
+# all_phases = ['S3_vs', 'ScS_vs', 'ScSScS_vs', 'Sdiff_vs', 'S_vs', 'SSm_vs', 'ScS4_vs', 'ScS3_vs', 'S4m_vs', 'S3m_vs', 'ScS5m_vs', 'S5m_vs', 'ScS3m_vs', 'ScS5_vs', 'S6m_vs', 'ScS4m_vs', 'SS_vs', 'S4_vs', 'S5_vs', 'S', 'SS', 'SSS', 'ScS', 'ScSScS', 'Sdiff', 'SSSm_mb', 'ScSScSScS_mb', 'ScSScSScSScS_mb', 'SSSSm_mb', 'SSSSSm_mb', 'ScSScSScSScSScS_mb', 'SSSSSSm_mb', 'ScSScSScSScSm_mb']
 
 # INPUT DATA FILES #
-dataset = 'eventinfo.clean.virtual_stack.all.csv' # 'eventinfo.multi_phase_single_pick.csv' #'eventinfo.comprehensive.6phase.Nov15.2019.csv'
-raw_headers_to_keep = ['COMPREHENSIVE_WEIGHT']
+dataset = 'Ritsema_data_SH.csv' #'eventinfo.clean.virtual_stack.all.csv' # 'eventinfo.multi_phase_single_pick.csv' #'eventinfo.comprehensive.6phase.Nov15.2019.csv'
+raw_headers_to_keep = ['STA_ELV', 'T_CORR']
 data_wave_type = 'S' # either 'S' or 'P'
 
 
@@ -61,13 +62,17 @@ target_path_length_tolerance = 5 # km
 azimuthal_sectors = 6
 
 
+# MODEL PREPROCESSING
+all_models_to_process = ['GLAD-M25_vsh', 'S40RTS_vsh', 'Savani_vsh', 'SEMUCB-WM1_vsh', 'SGLOBE-rani_vsh']
+
+
 ## INPUT MODEL PARAMETERES #
-input_model = 'PREM' # name of input model file
-delimiter = '|' # delimiter in converted model.csv file
+input_model = 'S40RTS_vsh' # name of input model file
+delimiter = ',' # delimiter in converted model.csv file
 lat_header = 'latitude' # header in converted model.csv file
 lon_header = 'longitude' # header in converted model.csv file
 depth_header = 'depth' # header in converted model.csv file
-property_header = 'vs' # header in converted model.csv file
+property_header = 'vsh' # header in converted model.csv file
 voigt = [False] #[False] [True, 'vpv', 'vph']
 
 
