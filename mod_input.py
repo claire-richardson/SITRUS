@@ -43,7 +43,7 @@ core_mantle_boundary = 2891. # km
 shell_bounds = [0., 24.4, 80., 160., 220., 310., 400., 490., 580., 670., 800., 900., 1000., 1100., 1200., 1300., 1400., 1500., 1600., 1700., 1800., 1900., 2000., 2100., 2200., 2300., 2400., 2500., 2600., 2700., 2800., 2891.] # km
 discontinuities = [0., 15., 24.4, 220., 400., 600., 670., 771., 2741., 2891.] # km; should include discontinuities of the reference model
 cardinal_azimuths = [0., 90., 180., 270., 360.] # degrees
-make_near_neighbors_files = True
+make_near_neighbors_files = False
 max_near_neighbors_radius = 15. # degrees
 reference_lat = 2 # degrees
 reference_lon = 2 # degrees
@@ -67,13 +67,14 @@ all_models_to_process = ['GLAD-M25_vsh', 'S40RTS_vsh', 'Savani_vsh', 'SEMUCB-WM1
 
 
 ## INPUT MODEL PARAMETERES #
-input_model = 'S40RTS_vsh' # name of input model file
+input_model = 'GLAD-M25_vsh' # name of input model file
 delimiter = ',' # delimiter in converted model.csv file
 lat_header = 'latitude' # header in converted model.csv file
 lon_header = 'longitude' # header in converted model.csv file
 depth_header = 'depth' # header in converted model.csv file
 property_header = 'vsh' # header in converted model.csv file
 voigt = [False] #[False] [True, 'vpv', 'vph']
+convert_vel_to_perturb = True
 
 
 ## MODEL UPDATE PARAMETERS
@@ -115,6 +116,7 @@ phases_directory = 'phases'
 data_directory = 'phase_data'
 backmapped_paths_directory = 'backmapped_path_files'
 paths_directory = 'raypath_files'
+resampled_directory = 'resampled_path_files'
 tomography_model_directory = 'models'
 near_neighbors_directory = 'near_neighbors'
 block_centric_directory = 'model_block_information'

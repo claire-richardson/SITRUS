@@ -129,7 +129,7 @@ def same_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block1, ty
                     # if lon2 is on the found longitude boundary, break (special case).
                     if round(lon2, rdp) == round(bound_pt[1], rdp):
                         break
-                    bound_block = mod_database.slice_block_mins(ref_block_info[2], ref_block_info[5])
+                    bound_block = mod_database.slice_block_mins(ref_block_info[2], bound_lon)
                     ref_block = bound_block
                     bound_dist = dist1 + mod_geo.GCP_length(lat1, lon1, bound_pt[0], bound_pt[1])
                     bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, bound_dist)
@@ -484,7 +484,7 @@ def different_shell_different_block(az, dist1, depth1, lat1, lon1, shell1, block
                             # if the shell boundary lon is on the found longitude boundary, break (special case).
                             if round(depth_boundary_lon, rdp) == round(bound_pt[1], rdp):
                                 break   
-                            bound_block = mod_database.slice_block_mins(ref_block_info[2], ref_block_info[5])
+                            bound_block = mod_database.slice_block_mins(ref_block_info[2], bound_lon)
                             ref_block = bound_block
                             bound_dist = dist1 + mod_geo.GCP_length(lat1, lon1, bound_pt[0], bound_pt[1])
                             bound_depth = mod_geo.new_depth(depth1, depth2, dist1, dist2, bound_dist)

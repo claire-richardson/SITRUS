@@ -83,7 +83,7 @@ def find_shell_id(z):
         shell_id = np.where(df_shells_t[3] == z)[0][0] + 1
     else:
         shell_id = np.where((df_shells_t[3] > z) & (df_shells_t[1] <= z))[0][0] + 1
-    return shell_id
+    return int(shell_id)
 
 def slice_shell_top(top_depth):
     '''
@@ -96,7 +96,7 @@ def slice_shell_top(top_depth):
     - shell ID with top depth ('DEPTH_MIN') equal to `top_depth` [format: int; unit: unitless]
     '''
     shell_id = np.where(df_shells_t[1] == top_depth)[0][0] + 1
-    return shell_id
+    return int(shell_id)
 
 def slice_shell_bottom(bottom_depth):
     '''
@@ -109,7 +109,7 @@ def slice_shell_bottom(bottom_depth):
     - shell ID with bottom depth ('DEPTH_MAX') equal to `bottom_depth` [format: int; unit: unitless]
     '''
     shell_id = np.where(df_shells_t[3] == bottom_depth)[0][0] + 1
-    return shell_id
+    return int(shell_id)
 
 #### BLOCK INFORMATION ####
 def get_block_info(block_id):
@@ -133,7 +133,7 @@ def get_block_info(block_id):
     '''
     df_slice = df_blocks[block_id - 1]
     block_id = int(df_slice[0])
-    lat_id = df_slice[1]
+    lat_id = int(df_slice[1])
     lat_min = df_slice[2]
     lat_max = df_slice[3]
     lon_min = df_slice[4]
@@ -153,11 +153,13 @@ def find_block_id(lat, lon):
     - shell ID of depth `z` [format: int; unit: unitless]
     ======
     '''
+    if lon == 180.:
+        lon = -180.
     if lat != 90.:
         block_id = np.where((df_blocks_t[2] <= lat) & (df_blocks_t[3] > lat) & (df_blocks_t[4] <= lon) & (df_blocks_t[5] > lon))[0][0] + 1
     elif lat == 90.:
         block_id = np.where((df_blocks_t[3] == 90.) & (df_blocks_t[4] <= lon) & (df_blocks_t[5] > lon))[0][0] + 1
-    return block_id
+    return int(block_id)
 
 def find_boundary_type(lat, lon, z):
     '''
@@ -176,6 +178,8 @@ def find_boundary_type(lat, lon, z):
     Outputs:
     - boundary type [format: string; unit: unitless]
     '''
+    if lon == 180.:
+        lon = -180.
     if z == CMB_depth:
         df_shell_slice = df_shells[np.where(df_shells_t[3] == z)[0][0]]
     else:
@@ -225,8 +229,10 @@ def slice_block_mins(lat_min, lon_min):
     Outputs:
     - block ID of block defined by `lat_min` and `lon_min` [format: int; unit: unitless]
     '''
+    if lon_min == 180.:
+        lon_min = -180.
     block_id = np.where((df_blocks_t[2] == lat_min) & (df_blocks_t[4] == lon_min))[0][0] + 1
-    return block_id
+    return int(block_id)
 
 def slice_block_min_max(lat_min, lon_max):
     '''
@@ -239,8 +245,10 @@ def slice_block_min_max(lat_min, lon_max):
     Outputs:
     - block ID of block defined by `lat_min` and `lon_max` [format: int; unit: unitless]
     '''
+    if lon_max == -180.:
+        lon_max = 180.
     block_id = np.where((df_blocks_t[2] == lat_min) & (df_blocks_t[5] == lon_max))[0][0] + 1
-    return block_id
+    return int(block_id)
 
 def slice_block_min_mid(lat_min, lon_mid):
     '''
@@ -254,7 +262,7 @@ def slice_block_min_mid(lat_min, lon_mid):
     - block ID of block defined by `lat_min` and `lon_mid` [format: int; unit: unitless]
     '''
     block_id = np.where((df_blocks_t[2] == lat_min) & (df_blocks_t[4] <= lon_mid) & (df_blocks_t[5] > lon_mid))[0][0] + 1
-    return block_id
+    return int(block_id)
 
 def slice_block_max_mid(lat_max, lon_mid):
     '''
@@ -268,7 +276,7 @@ def slice_block_max_mid(lat_max, lon_mid):
     - block ID of block defined by `lat_max` and `lon_mid` [format: int; unit: unitless]
     '''
     block_id = np.where((df_blocks_t[3] == lat_max) & (df_blocks_t[4] <= lon_mid) & (df_blocks_t[5] > lon_mid))[0][0] + 1
-    return block_id
+    return int(block_id)
 
 def slice_block_band_lon(band, lon_mid):
     '''
@@ -282,4 +290,4 @@ def slice_block_band_lon(band, lon_mid):
     - block ID of block defined by `band` and `lon_mid` [format: int; unit: unitless]
     '''
     block_id = np.where((df_blocks_t[1] == band) & (df_blocks_t[4] <= lon_mid) & (df_blocks_t[5] > lon_mid))[0][0] + 1
-    return block_id
+    return int(block_id)

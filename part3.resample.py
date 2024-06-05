@@ -1,4 +1,5 @@
 ## Import libraries, modules ##
+import os
 import glob
 import time
 import mod_geo
@@ -93,54 +94,58 @@ def prem_crust_travel_time(ray_param, depth_max):
         prem_crust_time = (t_uc + t_lc + t_m)
         
     return prem_crust_time
-        
-
-## Define functions ##
-def add_pt_info(path_len, mid_depth, p_azimuth, p_depth, p_dist, p_seg_dist, p_lat, p_lon, p_shell, p_block):
-    km_dist = path_len + cumulative_lengths[-1]
-    physical_property = mod_refmodels.prem_vel(mod_input.data_wave_type, mid_depth)
-    seg_time = path_len / physical_property
-    time = seg_time + cumulative_times[-1]
-    p_bound_type = mod_database.find_boundary_type(p_lat, p_lon, p_depth)
-    mid_pt = mod_geo.pt_from_dist(p_azimuth, pt_lats[-1], pt_lons[-1], (p_seg_dist / 2))
-    seg_shell = mod_database.find_shell_id(mid_depth)
-    seg_block = mod_database.find_block_id(mid_pt[0], mid_pt[1])
-    pt_depths.append(p_depth)
-    pt_epidists.append(p_dist)
-    pt_lats.append(p_lat)
-    pt_lons.append(p_lon)
-    pt_shell_nos.append(p_shell)
-    pt_block_nos.append(p_block)
-    pt_boundary_types.append(p_bound_type)
-    azimuths.append(p_azimuth)
-    segment_epidists.append(p_seg_dist)
-    segment_lengths.append(path_len)
-    segment_times.append(seg_time)
-    segment_shell_nos.append(seg_shell)
-    segment_block_nos.append(seg_block)
-    segment_mid_depths.append(mid_depth)
-    segment_properties.append(physical_property)
-    cumulative_times.append(time)
-    cumulative_epidists.append(p_dist)
-    cumulative_lengths.append(km_dist)
-    
-    
-def add_bound_info(depth, dist, lat, lon, shell, block, bound_type):
-    bound_depths.append(depth)
-    bound_dists.append(dist)
-    bound_lats.append(lat)
-    bound_lons.append(lon)
-    bound_shells.append(shell)
-    bound_blocks.append(block)
-    bound_types.append(bound_type)
 
 
 # boundary finding code/function for each parallel process:
 def find_boundaries_resample(phase):
+    ## Define functions ##
+    def add_pt_info(path_len, mid_depth, p_azimuth, p_depth, p_dist, p_seg_dist, p_lat, p_lon, p_shell, p_block):
+        km_dist = path_len + cumulative_lengths[-1]
+        physical_property = mod_refmodels.prem_vel(mod_input.data_wave_type, mid_depth)
+        seg_time = path_len / physical_property
+        time = seg_time + cumulative_times[-1]
+        p_bound_type = mod_database.find_boundary_type(p_lat, p_lon, p_depth)
+        mid_pt = mod_geo.pt_from_dist(p_azimuth, pt_lats[-1], pt_lons[-1], (p_seg_dist / 2))
+        seg_shell = mod_database.find_shell_id(mid_depth)
+        seg_block = mod_database.find_block_id(mid_pt[0], mid_pt[1])
+        pt_depths.append(p_depth)
+        pt_epidists.append(p_dist)
+        pt_lats.append(p_lat)
+        pt_lons.append(p_lon)
+        pt_shell_nos.append(p_shell)
+        pt_block_nos.append(p_block)
+        pt_boundary_types.append(p_bound_type)
+        azimuths.append(p_azimuth)
+        segment_epidists.append(p_seg_dist)
+        segment_lengths.append(path_len)
+        segment_times.append(seg_time)
+        segment_shell_nos.append(seg_shell)
+        segment_block_nos.append(seg_block)
+        segment_mid_depths.append(mid_depth)
+        segment_properties.append(physical_property)
+        cumulative_times.append(time)
+        cumulative_epidists.append(p_dist)
+        cumulative_lengths.append(km_dist)
+        
+        
+    def add_bound_info(depth, dist, lat, lon, shell, block, bound_type):
+        bound_depths.append(depth)
+        bound_dists.append(dist)
+        bound_lats.append(lat)
+        bound_lons.append(lon)
+        bound_shells.append(shell)
+        bound_blocks.append(block)
+        bound_types.append(bound_type)
+
     try:
-        os.remove(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pt3_boundary_finding_log.txt')
+        os.mkdir(f'./{mod_input.phases_directory}/{phase}/{mod_input.resampled_directory}')
     except:
         pass
+    try:
+        os.remove(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt3_boundary_finding_log.txt')
+    except:
+        pass
+    
     start_boundary_finding_time = time.time()
     ## Start code ##
     df_phase_data = pd.read_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_master_data.csv')
@@ -151,15 +156,18 @@ def find_boundaries_resample(phase):
     # begin master loop to loop through all raypaths
     for path in paths:
         itr += 1
-        with open(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pt3_boundary_finding_log.txt', 'a') as fout:
-            fout.write(f'- working on path {itr} of {len(paths)}\n')
+        # with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt3_resample_log.txt', 'a') as fout:
+        #     fout.write(f'- working on path {itr} of {len(paths)}\n')
         try:
             df_p = pd.read_csv(path)
             path_id = str(path).split(sep = '_')[-5]
             ray_param = df_p['p'][1]
             df_p = df_p.drop(columns = ['p', 'TIME'])
             max_depth = df_p['DEPTH'].max()
-    
+            with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt3_resample_log.txt', 'a') as fout:
+                fout.write(f'- working on path {itr} (path id: {path_id}) of {len(paths)}\n')
+            
+
             # first, find any boundaries.
             # initialize lists:
             bound_dists = []
@@ -196,7 +204,7 @@ def find_boundaries_resample(phase):
                 azimuth = mod_geo.azimuth(ps_lat, ps_lon, pr_lat, pr_lon)
                 bazimuth = mod_geo.azimuth(pr_lat, pr_lon, ps_lat, ps_lon)
                 inflection_info = mod_geo.inflection_finder(azimuth, bazimuth, ps_lat, ps_lon, pr_lat, pr_lon, ps_epidist, pr_epidist)
-
+                    
                 # if there is an inflection point, retrieve its attributes and include it in the boundary finding process
                 if inflection_info[0] == True:
                     pi_epidist = inflection_info[1]
@@ -216,7 +224,7 @@ def find_boundaries_resample(phase):
                     point_bound_types = [ps_bound_type, pi_bound_type, pr_bound_type]
                     # add the new point to the boundary dataframe (even if it isn't a boundary, it should be retained)
                     add_bound_info(pi_depth, pi_epidist, pi_lat, pi_lon, pi_shell, pi_block, pi_bound_type)
-    
+                    
                 # if there is no inflection point, move forward as usual with the original taup_path point pair
                 elif inflection_info[0] == False:
                     point_depths = [ps_depth, pr_depth]
@@ -226,7 +234,7 @@ def find_boundaries_resample(phase):
                     point_shells = [ps_shell, pr_shell]
                     point_blocks = [ps_block, pr_block]
                     point_bound_types = [ps_bound_type, pr_bound_type]
-
+                    
                 # start the main boundary finding loop
                 for pair in range(len(point_depths) - 1):
                     pair_2 = pair + 1
@@ -250,7 +258,7 @@ def find_boundaries_resample(phase):
     
                     # calculate the new azimuth and back azimuth
                     az = mod_geo.azimuth(p1_lat, p1_lon, p2_lat, p2_lon)
-
+                    
                     # if the boundaries are in the same block but cross at least one depth boundary:
                     if p1_shell != p2_shell and p1_block == p2_block:
                         bound_info = mod_boundary.different_shell_same_block(az, p1_epidist, p1_depth, p1_lat, p1_lon, p1_shell, p1_block, p1_bound_type, p2_epidist, p2_depth, p2_lat, p2_lon, p2_shell, p2_block, p2_bound_type)
@@ -263,7 +271,7 @@ def find_boundaries_resample(phase):
                             bound_block = bound_info[5][bound]
                             bound_type = bound_info[6][bound]
                             add_bound_info(bound_depth, bound_dist, bound_lat, bound_lon, bound_shell, bound_block, bound_type)
-    
+
                     # if the boundaries are in the same shell but cross at least one block boundary
                     elif p1_shell == p2_shell and p1_block != p2_block:
                         bound_info = mod_boundary.same_shell_different_block(az, p1_epidist, p1_depth, p1_lat, p1_lon, p1_shell, p1_block, p1_bound_type, p2_epidist, p2_depth, p2_lat, p2_lon, p2_shell, p2_block, p2_bound_type)
@@ -276,7 +284,7 @@ def find_boundaries_resample(phase):
                             bound_block = bound_info[5][bound]
                             bound_type = bound_info[6][bound]
                             add_bound_info(bound_depth, bound_dist, bound_lat, bound_lon, bound_shell, bound_block, bound_type)
-    
+
                     # if the boundaries cross at least one shell boundary and at least one block boundary
                     elif p1_shell != p2_shell and p1_block != p2_block:
                         bound_info = mod_boundary.different_shell_different_block(az, p1_epidist, p1_depth, p1_lat, p1_lon, p1_shell, p1_block, p1_bound_type, p2_epidist, p2_depth, p2_lat, p2_lon, p2_shell, p2_block, p2_bound_type)
@@ -512,13 +520,12 @@ def find_boundaries_resample(phase):
             headers = ','.join(h)
     
             # save the dataframe:
-            np.savetxt(f'./{mod_input.phases_directory}/{phase}/{mod_input.paths_directory}/{phase}_{path_id}_resampled_segments.csv', df_resamp, fmt = format_string, header = headers, delimiter = ',', comments = '')
-            os.remove(path)
-            
-            print(f'Path number: {itr} of {tot_paths}; path: {path}')
+            np.savetxt(f'./{mod_input.phases_directory}/{phase}/{mod_input.resampled_directory}/{phase}_{path_id}_resampled_segments.csv', df_resamp, fmt = format_string, header = headers, delimiter = ',', comments = '')
+            # os.remove(path)
+            # print(f'Path number: {itr} of {tot_paths}; path: {path}')
     
         except:
-            print(f'Path number: {itr} of {tot_paths}; path: {path}; ***** BUG *****')
+            # print(f'Path number: {itr} of {tot_paths}; path: {path}; ***** BUG *****')
             # save the name of the path to a new file
             with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt3_resample_bugs.txt', 'a') as fout:
                 fout.write(f'{path}\n')
@@ -528,8 +535,8 @@ def find_boundaries_resample(phase):
     df_phase_data['CRUST_1.0_ELLIP_DT'] = df_phase_data['DT'] - df_phase_data['CRUST_1.0_CORR'] - df_phase_data['ELLIP_CORR']
     df_phase_data.to_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_master_data.csv', index = False)
 
-    with open(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pt3_boundary_finding_log.txt', 'a') as fout:
-        fout.write(f'FINISHED; total time: {(time.time() - start_boundary_finding_time) / 60 minutes; {((time.time() - start_boundary_finding_time) / 60) / 60} hours\n')
+    with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt3_resample_log.txt', 'a') as fout:
+        fout.write(f'FINISHED; total time: {(time.time() - start_boundary_finding_time) / 60} minutes; {((time.time() - start_boundary_finding_time) / 60) / 60} hours\n')
 
 ## Start parallel processes:
 print(f'START FINDING BOUNDARIES AND RESAMPLING RAYPATHS')

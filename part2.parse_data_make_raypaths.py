@@ -14,8 +14,6 @@ from ellipticipy import ellipticity_correction
 
 phases_directory = mod_input.phases_directory
 data_directory = mod_input.data_directory
-# orig_paths_directory = mod_input.orig_paths_directory
-# resampled_paths_directory = mod_input.resampled_paths_directory
 paths_directory = mod_input.paths_directory
 model = TauPyModel(model = mod_input.reference_model)
 rdp = mod_input.rounded_decimal_places
@@ -25,6 +23,10 @@ try:
 except:
     pass
 
+if mod_input.data_wave_type == 'S':
+    df_crust = pd.read_csv(f'./{mod_input.tomography_model_directory}/crust/CRUST_1.0_vsh.csv')
+elif mod_input.data_wavey_type == 'P':
+    df_crust = pd.read_csv(f'./{mod_input.tomography_model_directory}/crust/CRUST_1.0_vp.csv')
 df_data = pd.read_csv(mod_input.dataset)
 df_phases = df_data['PHASE'].unique()
 all_phases = list(df_phases)
@@ -49,6 +51,7 @@ for p in all_phases:
         df_specific_phase['CRUST_1.0_CORR'] = 0.
         df_specific_phase['CRUST_1.0_DT'] = 0.
         df_specific_phase['CRUST_1.0_ELLIP_DT'] = 0.
+        df_specific_phase['VERT_TIME'] = 0.
         df_specific_phase['PATH_ID'] = 0
         df_specific_phase.to_csv(f'./{phases_directory}/{p}/{data_directory}/{p}_master_data.csv', index = False)
     except:
@@ -98,15 +101,26 @@ def make_raypaths(phase):
     path_id = 0
     for path in range(len(df_data)):
         path_2 = path + 1
-        with open(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pt2_make_raypaths_log.txt', 'a') as fout:
+        with open(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pt2_log_make_raypaths.txt', 'a') as fout:
             fout.write(f'- working on path {path_2} of {len(df_data)}\n')
         slat = df_data['STA_LAT'].iloc[path]
         slon = df_data['STA_LON'].iloc[path]
         elat = df_data['EQ_LAT'].iloc[path]
         elon = df_data['EQ_LON'].iloc[path]
         depth = df_data['EQ_DEP'].iloc[path]
+        sta_elv = df_data['STA_ELV'].iloc[path]
         dt = df_data['DT'].iloc[path]
         path_az = mod_geo.azimuth(elat, elon, slat, slon)
+    
+        vert_time = 0.
+        if depth < 0:
+            prem_v = mod_refmodels.prem_vel(mod_input.data_wave_type, 0.)
+            vert_time += (abs(depth) / prem_v)
+            depth = 0.
+    
+        if sta_elv > 0.:
+            prem_v = mod_refmodels.prem_vel(mod_input.data_wave_type, 0.)
+            vert_time += (sta_elv / prem_v)
         
         if 'm' in phase_name:
             phase2 = phase_name.replace('m', '')
@@ -146,7 +160,7 @@ def make_raypaths(phase):
                     save = False
                     issue = 'major arc; listed arrival/compute bug'
                     pass
-
+    
         else:
             arrivals = model.get_ray_paths_geo(depth, elat, elon, slat, slon, [phase_name])
             if not arrivals:
@@ -160,50 +174,50 @@ def make_raypaths(phase):
                 df_pathfile = pd.DataFrame(np.array(pathfile))
                 df_pathfile['dist'] = df_pathfile['dist'] * (180. / np.pi)
                 save = True
-
+    
         if save == True:
             out_path = f'./{phases_directory}/{phase}/{paths_directory}/orig_{phase}_{path_id}_{elat}_{elon}_{slat}_{slon}.csv'
             df_pathfile = df_pathfile.rename(columns = {'time': 'TIME', 'dist': 'DIST', 'depth': 'DEPTH', 'lat': 'LAT', 'lon': 'LON'})
             df_pathfile['SHELL#'] = 0
             df_pathfile['BLOCK#'] = 0
             df_pathfile['BOUND'] = 'hold'
-            # df_pathfile['CRUST_POINT'] = False
             
             # find block#, shell#, and bound type for each point in the new pathfile
             for point in range(len(df_pathfile)):
                 path_depth = df_pathfile['DEPTH'].iloc[point]
                 path_lat = df_pathfile['LAT'].iloc[point]
                 path_lon = df_pathfile['LON'].iloc[point]
-
+    
                 if path_lon >= 180.:
                     path_lon -= 360.
-
+    
                 # add other identifying attributes
                 shell = mod_database.find_shell_id(path_depth)
                 block = mod_database.find_block_id(path_lat, path_lon)
                 bound_type = mod_database.find_boundary_type(path_lat, path_lon, path_depth)
-
+    
                 df_pathfile.loc[point, 'SHELL#'] = shell
                 df_pathfile.loc[point, 'BLOCK#'] = block
                 df_pathfile.loc[point, 'BOUND'] = bound_type
-
+    
             df_data.loc[path, 'DIST'] = df_pathfile['DIST'].iloc[-1]
             df_data.loc[path, 'ELLIP_CORR'] = round(ellip_correction, rdp)
             df_data.loc[path, 'ELLIP_DT'] = dt - (round(ellip_correction, rdp))
+            df_data.loc[path, 'VERT_TIME'] = vert_time
             df_data.loc[path, 'PATH_ID'] = int(path_id)
-
+    
             df_pathfile.to_csv(out_path, index = False)
             path_id += 1
-
+    
         elif save == False:
             df_data.loc[path, 'PATH_ID'] = np.nan
-            with open(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pathfile_bugs.txt', 'a') as fout:
+            with open(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pt2_pathfile_bugs.txt', 'a') as fout:
                 fout.write(f'{depth},{elat},{elon},{slat},{slon},{issue}\n')
-
+                
     df_data = df_data.dropna(subset = ['PATH_ID']).reset_index(drop = True)
     df_data.to_csv(f'./{phases_directory}/{phase}/{data_directory}/{phase}_master_data.csv', index = False)
     
-    with open(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pt2_make_raypaths_log.txt', 'a') as fout:
+    with open(f'./{phases_directory}/{phase}/{data_directory}/{phase}_pt2_log_make_raypaths.txt', 'a') as fout:
         fout.write(f'FINISHED; total time: {(time.time() - start_raypaths) / 60} minutes; {((time.time() - start_raypaths) / 60) / 60} hours\n')
 
 ## MAKE RAYPATHS:
