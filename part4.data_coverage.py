@@ -56,13 +56,14 @@ except:
 
 
 def find_phase_coverage(phase):
+    phase_name = phase.split('_')[0]
     try:
-        os.remove(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt4_log_coverage.txt')
+        os.remove(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_pt4_log_coverage.txt')
     except:
         pass
         
     start_coverage_time = time.time()
-    paths = glob.glob(f'./{mod_input.phases_directory}/{phase}/{mod_input.resampled_directory}/{phase}_*.csv')
+    paths = glob.glob(f'./{mod_input.phases_directory}/{phase}/{mod_input.resampled_directory}/{phase_name}_*.csv')
     df_phase = pd.DataFrame()
     
     # make the master dataframe for all of the sectors defined in mod_input. this will be the empty dataframe for each individual phase.
@@ -86,7 +87,7 @@ def find_phase_coverage(phase):
     # for each path file, find all of the unique block & shell id combinations that the ray passes through    
     for path in paths:
         itr += 1
-        with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt4_log_coverage.txt', 'a') as fout:
+        with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_pt4_log_coverage.txt', 'a') as fout:
             fout.write(f'- working on path {itr} of {len(paths)}\n')
     
         df_p = pd.read_csv(path)
@@ -164,7 +165,7 @@ def find_phase_coverage(phase):
         df_phase_paths_grid.to_csv(avg_phase_paths_file, index = False)
         df_phase_sectors_grid.to_csv(avg_phase_sectors_file, index = False)
     
-    with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt4_log_coverage.txt', 'a') as fout:
+    with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_pt4_log_coverage.txt', 'a') as fout:
         fout.write(f'FINISHED; total time: {(time.time() - start_coverage_time) / 60} minutes; {((time.time() - start_coverage_time) / 60) / 60} hours\n')
 
 
@@ -175,10 +176,10 @@ if __name__ == '__main__':
     process_list = []
     process_idx = 0
     for phase in mod_input.all_phases:
-        with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt4_log_coverage.txt', 'a') as fout:
+        phase_name = phase.split('_')[0]
+        with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_pt4_log_coverage.txt', 'a') as fout:
             fout.write(f'START PARSING INDIVIDUAL PHASE COVERAGE\n')
         process_idx += 1
-        print(f'  - starting process {process_idx} of {len(mod_input.all_phases)}')
 
         p = mp.Process(target = find_phase_coverage, args = (phase,))
         p.start()
@@ -188,12 +189,12 @@ if __name__ == '__main__':
         process.join()
 
     coverage_time = time.time() - coverage_start
-    with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt4_log_coverage.txt', 'a') as fout:
+    with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_pt4_log_coverage.txt', 'a') as fout:
         fout.write(f'FINISHED PARSING INDIVIDUAL PHASE COVERAGE; runtime: {coverage_time / 60} minutes / {(coverage_time / 60) / 60} hours\n\n')
 
 # loop through each newly made individual coverage file to compile the sums into the master/total coverage file.
 for phase in mod_input.all_phases:
-    df_phase_coverage = pd.read_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_coverage.csv')
+    df_phase_coverage = pd.read_csv(f'./coverage/{phase}_coverage.csv')
     df_all['TOTAL_PATHS'] = df_all['TOTAL_PATHS'] + df_phase_coverage['TOTAL_PATHS']
 
     for sector in sector_nos:
@@ -215,4 +216,6 @@ for line in range(len(df_all)):
 
 df_all = pd.DataFrame(df_all, columns = column_names)
 df_all.to_csv(f'./coverage/total_coverage.csv', index = False)
+
+
 

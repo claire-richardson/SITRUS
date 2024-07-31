@@ -48,7 +48,7 @@ def azimuthal_sector(az):
     if az >= 180.:
         az -= 180.
     df_az_slice = df_sectors.loc[(df_sectors['MIN'] <= az) & (df_sectors['MAX'] > az)]
-    return int(df_az_slice['ID'])
+    return int(df_az_slice['ID'].iloc[0])
 
 # Find the standard deviation of the Gaussian function that will be used for weighting, and then define the Gaussian as a function of radius:
 def gaussian(total_R, x, gaussian_cutoff_weight):
@@ -73,70 +73,151 @@ df_blocks = pd.read_csv(mod_input.block_file)
 all_shells = df_shells['SHELL#']
 all_blocks = df_blocks['BLOCK#']
 
-# make plot ready files for model visualization
-try:
-    plot_dir = f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/original_model_plot_files'
-    os.mkdir(plot_dir)
-    for shell_to_plot in all_shells:
-        og_perturbs_file = f'{plot_dir}/{model}_shell_{shell_to_plot}_original_perturbs_plot_ready_{mod_input.reference_lat}deg_lat_by_{mod_input.reference_lon}deg_lon.csv'
-        df_og_shell_data = df_original_model.loc[df_original_model['SHELL#'] == shell_to_plot]
-        df_original = pd.DataFrame(data = {'LON': lons})
-
-        # make empty lists that will be filled with numpy arrays for each latitude band, for each model.\
-        og_dvs = []
-        # loop through all latitudes in the model space
-        for lat in np.arange(mod_input.start_lat, mod_input.final_lat, mod_input.reference_lat):
-            # make empty lists to fill in the perturbations for the current latitude band
-            lat_og_dvs = []
-            # loop through all longitudes in the model space
-            for lon in np.arange(mod_input.start_lon, mod_input.final_lon, mod_input.reference_lon):
-                # find the block that the current lat/lon pair falls in
-                block = mod_database.find_block_id(lat, lon)
-                original_perturb = float(df_og_shell_data.loc[df_og_shell_data['BLOCK#'] == block][out_property_header])
-                lat_og_dvs.append(original_perturb)
-            og_dvs.append(np.array(lat_og_dvs))
-            df_original[f'{lat}'] = lat_og_dvs
-        df_original.to_csv(og_perturbs_file, index = False)
-        og_dvs = np.array(og_dvs)
-except:
-    pass
-
 # initialize an empty dataframe for variance reduction
 df_variance = pd.DataFrame(columns = ['layer', 'iteration', 'total_paths', 'misfit_mean', 'misfit_std', 'misfit_var'])
 
 
 # define functions for multiprocessing/parallelization
-def backmap_residual(lists_of_paths, list_idx):
-    df_idx = 0
-    block_info_cols = ['SHELL#', 'BLOCK#', 'PHASE', 'PATH_ID', 'PATH_LENGTH_KM', out_property_header, 'AZIMUTH', 'SECTOR']
-    for special_weight in layer_special_weights:
-        block_info_cols.append(special_weight)
-    df_block_info = pd.DataFrame(columns = block_info_cols)
-    df_residuals = pd.DataFrame(columns = ['PHASE', 'PATH_ID', 'REF_pred_time', 'ORIG_DT', 'STARTING_pred_time', 'STARTING_DT', 'MISFIT'])
-
+def remove_mean(lists_of_paths, list_idx):
+    df_main_data = pd.DataFrame(columns = ['EQ_DATE', 'EQ_LAT', 'EQ_LON', 'PATH_ID', 'PHASE', layer_residual_header, 'DATASET', 'DT_PRED'])
     for list_of_paths in lists_of_paths:
         phase = str(list_of_paths[0].split('/')[2])
         phase_name = str(phase.split('_')[0])
+        dataset = '_'.join(phase.split('_')[1:])
         df_data = pd.read_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_master_data.csv')
+        df_data = df_data[['EQ_DATE', 'EQ_LAT', 'EQ_LON', 'PATH_ID', 'PHASE', layer_residual_header]].copy()
+        df_data['PHASE'] = phase_name
+        df_data['DATASET'] = dataset
+        df_data['DT_PRED'] = np.NaN
+        df_data = np.array(df_data).T
         
         for path in list_of_paths:
-            backmap = True
+            remove_mean = True
             tot_time = 0.
             df_p = pd.read_csv(path)
             path_id = int(path.split('_')[-3])
+            dataset_idx = np.where(df_data[3] == path_id)[0][0]
             # check if there are any segments in df_p that have a length of zero and drop these from the dataframe
             df_p = df_p.loc[df_p['SEG_DIST_KM'] != 0.].reset_index(drop = True)
-            path_max_depth = df_p['START_DEPTH'].max()
+            df_p = np.array(df_p)
+            path_max_depth = df_p.T[1].max()
 
             # check if the current path is above the layer stripping depth. continue only if it is.
             if path_max_depth <= layer_stripping_depth and path_max_depth > layer_depth_min:
 
                 # find the reference model (e.g., prem) total travel time for the path. this will just be the total time in df_p.
-                ref_model_time = float(df_p['TIME'].iloc[-1])
+                ref_model_time = df_p.T[25, -1]
 
                 # grab the dataset residual for the current path
-                dataset_residual = float(df_data.loc[df_data['PATH_ID'] == path_id][layer_residual_header])
+                dataset_residual = df_data[5, dataset_idx]
+                
+                if layer_residual_limits[0] == True:
+                    if layer_residual_limits[1] <= dataset_residual <= layer_residual_limits[2]:
+                        remove_mean = True
+                    else:
+                        remove_mean = False
+                
+                elif layer_residual_limits[0] == False:
+                    remove_mean = True
+                    
+                if remove_mean == True:
+                    ## LOOP 1: compute the travel time of the current path through the starting model (df_model).
+                    for segment in range(len(df_p)):
+                        # for each path segment in the current working path, find its attributes
+                        dist_km = df_p[segment, 17]
+                        shell_no = df_p[segment, 19]
+                        block_no = df_p[segment, 20]
+                        mid_depth = df_p[segment, 21]
+                        prem_val = df_p[segment, 22]
 
+                        # df_model_slice is the single line in the model dataframe for the element that the current path segment is in.
+                        # from df_model_slice, find the velocity perturbation of that element (model_element_perturb)
+                        model_element_perturb = float(df_model.loc[(df_model['SHELL#'] == shell_no) & (df_model['BLOCK#'] == block_no)][out_property_header].iloc[0])
+
+                        # find the velocity value for the path segment through the starting model.
+                        seg_v = prem_val + ((model_element_perturb / 100.) * prem_val)
+                        df_p[segment, 22] = seg_v
+
+                        # use that velocity value and the length of the path (in km) to find the travel time for just this path segment
+                        seg_time = dist_km / seg_v
+                        df_p[segment, 18] = seg_time
+
+                        # add that path segment travel time to the cumulative `tot_time` variable
+                        tot_time += seg_time
+                        df_p[segment, 25]
+
+                    # update df_p, which is now the path through the model
+                    df_p[:, 24] = (df_p[:, 25] / df_p[-1, 25]) * 100
+
+                    # total starting model time - total reference model time (residual between starting model and reference model)
+                    predicted_residual = tot_time - ref_model_time
+                    df_data[-1, dataset_idx] = predicted_residual
+        df_data = df_data.T
+        df_data = pd.DataFrame(df_data, columns = ['EQ_DATE', 'EQ_LAT', 'EQ_LON', 'PATH_ID', 'PHASE', layer_residual_header, 'DATASET', 'DT_PRED'])
+        df_main_data = pd.concat([df_main_data, df_data]).reset_index(drop = True)
+    df_main_data['EQ_DATE'] = df_main_data['EQ_DATE'].astype(int)
+    df_main_data['PATH_ID'] = df_main_data['PATH_ID'].astype(int)
+    df_main_data = df_main_data.dropna(subset = ['DT_PRED']).reset_index(drop = True)
+    df_main_data.to_csv(f'{layer_directory}/tmp_pred_residuals_{list_idx}.csv', index = False)
+
+
+def backmap_residual(lists_of_paths, list_idx):
+    df_idx = 0
+    block_info_cols = ['SHELL#', 'BLOCK#', 'PHASE', 'PATH_ID', 'PATH_LENGTH_KM', 'CENTER_LAT', 'CENTER_LON', out_property_header, 'AZIMUTH', 'SECTOR']
+    data_cols = ['EQ_DATE', 'EQ_LAT', 'EQ_LON', 'PATH_ID', layer_residual_header]
+    special_weight_ids = []
+    special_weight_idx = 5
+    for special_weight in layer_special_weights:
+        block_info_cols.append(special_weight)
+        data_cols.append(special_weight)
+        special_weight_ids.append(special_weight_idx)
+        special_weight_idx += 1
+    df_block_info = pd.DataFrame(columns = block_info_cols)
+    df_residuals = pd.DataFrame(columns = ['PHASE', 'PATH_ID', 'REF_pred_time', 'ORIG_DT', 'STARTING_pred_time', 'STARTING_DT', 'MISFIT'])
+    
+    for list_of_paths in lists_of_paths:
+        phase = str(list_of_paths[0].split('/')[2])
+        phase_name = str(phase.split('_')[0])
+        dataset = '_'.join(phase.split('_')[1:])
+        df_data = pd.read_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_master_data.csv').copy()
+        df_data = np.array(df_data[data_cols])
+
+        # apply the mean removal
+        if layer_remove_mean == True:
+            for line in range(len(df_data)):
+                eq_date = df_data[line, 0]
+                eq_lat = df_data[line, 1]
+                eq_lon = df_data[line, 2]
+                # find the corresponding mean correction in df_events
+                try:
+                    df_events_idx = np.where((df_events[0] == eq_date) & (df_events[1] == eq_lat) & (df_events[2] == eq_lon) & (df_events[3] == dataset))[0][0]
+                    mean_corr = df_events[-1, df_events_idx]
+                    df_data[line, 4] = df_data[line, 4] - mean_corr
+                except:
+                    pass
+                
+        df_data = df_data.T       
+        for path in list_of_paths:
+            backmap = True
+            tot_time = 0.
+            df_p = pd.read_csv(path)
+            path_cols = list(df_p.columns)
+            path_id = int(path.split('_')[-3])
+            dataset_idx = np.where(df_data[3] == path_id)[0][0]
+            # check if there are any segments in df_p that have a length of zero and drop these from the dataframe
+            df_p = df_p.loc[df_p['SEG_DIST_KM'] != 0.].reset_index(drop = True)
+            df_p = np.array(df_p)
+            path_max_depth = df_p.T[1].max()
+
+            # check if the current path is above the layer stripping depth. continue only if it is.
+            if path_max_depth <= layer_stripping_depth and path_max_depth > layer_depth_min:
+
+                # find the reference model (e.g., prem) total travel time for the path. this will just be the total time in df_p.
+                ref_model_time = df_p.T[25, -1]
+
+                # grab the dataset residual for the current path
+                dataset_residual = df_data[4, dataset_idx]
+                
                 if layer_residual_limits[0] == True:
                     if layer_residual_limits[1] <= dataset_residual <= layer_residual_limits[2]:
                         backmap = True
@@ -150,32 +231,31 @@ def backmap_residual(lists_of_paths, list_idx):
                     ## LOOP 1: compute the travel time of the current path through the starting model (df_model).
                     for segment in range(len(df_p)):
                         # for each path segment in the current working path, find its attributes
-                        dist_km = float(df_p['SEG_DIST_KM'].iloc[segment])
-                        shell_no = int(df_p['SEG_SHELL#'].iloc[segment])
-                        block_no = int(df_p['SEG_BLOCK#'].iloc[segment])
-                        mid_depth = float(df_p['MID_DEPTH'].iloc[segment])
-                        prem_val = float(df_p[f'SEG_V{mod_input.data_wave_type}'].iloc[segment])
+                        dist_km = df_p[segment, 17]
+                        shell_no = df_p[segment, 19]
+                        block_no = df_p[segment, 20]
+                        mid_depth = df_p[segment, 21]
+                        prem_val = df_p[segment, 22]
 
                         # df_model_slice is the single line in the model dataframe for the element that the current path segment is in.
                         # from df_model_slice, find the velocity perturbation of that element (model_element_perturb)
-                        model_element_perturb = float(df_model.loc[(df_model['SHELL#'] == shell_no) & (df_model['BLOCK#'] == block_no)][out_property_header])
+                        model_element_perturb = float(df_model.loc[(df_model['SHELL#'] == shell_no) & (df_model['BLOCK#'] == block_no)][out_property_header].iloc[0])
 
                         # find the velocity value for the path segment through the starting model.
                         seg_v = prem_val + ((model_element_perturb / 100.) * prem_val)
-                        df_p.loc[segment, f'SEG_V{mod_input.data_wave_type}'] = seg_v
+                        df_p[segment, 22] = seg_v
 
                         # use that velocity value and the length of the path (in km) to find the travel time for just this path segment
                         seg_time = dist_km / seg_v
-                        df_p.loc[segment, 'SEG_TIME'] = seg_time
+                        df_p[segment, 18] = seg_time
 
                         # add that path segment travel time to the cumulative `tot_time` variable
                         tot_time += seg_time
-                        df_p.loc[segment, 'TIME'] = tot_time
+                        df_p[segment, 25]
 
                     # update df_p, which is now the path through the model
-                    df_p['TIME_PERCENT'] = (df_p['TIME'] / df_p['TIME'].iloc[-1]) * 100.
+                    df_p[:, 24] = (df_p[:, 25] / df_p[-1, 25]) * 100
 
-                    # step 1 of flow chart:
                     # total starting model time - total reference model time (residual between starting model and reference model)
                     predicted_residual = tot_time - ref_model_time
 
@@ -189,6 +269,14 @@ def backmap_residual(lists_of_paths, list_idx):
                     # step 3 of flow chart (backmap unexplained difference into paths through starting model):
                     # Check where we are in the layer stripping situation
                     # first, if we DONT want to freeze the previous layer: 
+                    df_p = pd.DataFrame(df_p, columns = path_cols)
+                    df_p['START_SHELL#'] = df_p['START_SHELL#'].astype(int)
+                    df_p['START_BLOCK#'] = df_p['START_BLOCK#'].astype(int)
+                    df_p['END_SHELL#'] = df_p['END_SHELL#'].astype(int)
+                    df_p['END_BLOCK#'] = df_p['END_BLOCK#'].astype(int)
+                    df_p['SEG_SHELL#'] = df_p['SEG_SHELL#'].astype(int)
+                    df_p['SEG_BLOCK#'] = df_p['SEG_BLOCK#'].astype(int)
+
                     if freeze_previous_layer == False or freeze_previous_layer == None:
                         df_p_update = df_p.copy()
                         df_layer_rms = df_rms.copy()
@@ -216,7 +304,7 @@ def backmap_residual(lists_of_paths, list_idx):
 
                     for segment in range(len(df_p_update)):
                         segment_shell_no = df_p_update['SEG_SHELL#'].iloc[segment]
-                        norm_rms_update = float(df_layer_rms.loc[df_layer_rms['SHELL#'] == segment_shell_no][f'NORM_{RMS_header}'])
+                        norm_rms_update = float(df_layer_rms.loc[df_layer_rms['SHELL#'] == segment_shell_no][f'NORM_{RMS_header}'].iloc[0])
                         df_p_update.loc[segment, 'norm_rms'] = norm_rms_update                    
 
 
@@ -248,34 +336,41 @@ def backmap_residual(lists_of_paths, list_idx):
                         df_p_update.loc[val, 'TIME'] = t
 
                     df_p_update['TIME_PERCENT'] = (df_p_update['TIME'] / df_p_update['TIME'].iloc[-1]) * 100.
-
-
+                    df_p_update_np = np.array(df_p_update)
+                    
                     # Isolate the unique block and shell IDS in each path and condense to representative block values
-                    df_path_elements = df_p_update.groupby(['SEG_SHELL#','SEG_BLOCK#']).size().reset_index().rename(columns = {0: 'TOTAL_PATHS'})
-
+                    df_path_elements = np.array(df_p_update.groupby(['SEG_SHELL#','SEG_BLOCK#']).size().reset_index())
                     # loop through each unique combination
                     for pair in range(len(df_path_elements)):
-                        shell_no = df_path_elements['SEG_SHELL#'].iloc[pair]
-                        block_no = df_path_elements['SEG_BLOCK#'].iloc[pair]
+                        shell_no = df_path_elements[pair, 0]
+                        block_no = df_path_elements[pair, 1]
 
                         # find all of the segments in the current block
-                        df_slice = df_p_update.loc[(df_p_update['SEG_SHELL#'] == shell_no) & (df_p_update['SEG_BLOCK#'] == block_no)]
+                        df_update_indices = np.where((df_p_update_np.T[19] == shell_no) & (df_p_update_np.T[20] == block_no))[0]
+                        df_slice = df_p_update_np[df_update_indices]
 
-                        updated_velocity = df_slice[f'SEG_V{mod_input.data_wave_type}'].iloc[0]
-                        mid_depth = df_slice['MID_DEPTH'].iloc[0]
+                        updated_velocity = df_slice[0, 22]
+                        mid_depth = df_slice[0, 21]
                         prem_velocity = mod_refmodels.prem_vel(mod_input.data_wave_type, mid_depth)
                         percent_perturbation = (100. * (updated_velocity / prem_velocity)) - 100.
 
                         # if we're in the first iteration, then add all new data. if not, just update the velocity perturbation column.
-                        total_length_km = df_slice['SEG_DIST_KM'].sum()
-                        azimuth = df_slice['AZIMUTH'].mean()
+                        total_length_km = np.sum(df_slice.T[17])
+                        total_length_deg = np.sum(df_slice.T[16])
+                        start_lat = df_slice[0, 3]
+                        start_lon = df_slice[0, 4]
+                        end_lat = df_slice[-1, 10]
+                        end_lon = df_slice[-1, 11]
+                        azimuth = np.mean(df_slice.T[15])
                         az_sector = azimuthal_sector(azimuth)
+                        segment_center = total_length_deg / 2.
+                        segment_center_coords = mod_geo.GCP_point(start_lat, start_lon, end_lat, end_lon, total_length_deg, segment_center)
 
                         # add all of that information to the last row of the block file
-                        new_block_info = [shell_no, block_no, phase, path_id, total_length_km, percent_perturbation, azimuth, az_sector]
+                        new_block_info = [shell_no, block_no, phase, path_id, total_length_km, segment_center_coords[0], segment_center_coords[1], percent_perturbation, azimuth, az_sector]
 
-                        for special_weight in layer_special_weights:
-                            new_block_info.append(float(df_data.loc[df_data['PATH_ID'] == path_id][special_weight]))
+                        for special_weight_id in special_weight_ids:
+                            new_block_info.append(df_data[special_weight_id, dataset_idx])
                         df_block_info.loc[len(df_block_info)] = new_block_info
 
                     df_p_update.to_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.backmapped_paths_directory}_{job_id}/{phase_name}_{path_id}_backmapped_segments.csv', index = False)
@@ -299,19 +394,30 @@ def backmap_residual(lists_of_paths, list_idx):
             df_shell = pd.concat([df_shell, df_block_info_shell]).reset_index(drop = True)
             df_shell.to_csv(f'{layer_directory}/tmp_block_info_idx_{list_idx}/shell_{shell_no}.csv', index = False)
         os.remove(f'{layer_directory}/tmp_block_info_idx_{list_idx}/df_index_{d_id}.csv')
-        
+
 
 def model_smoothing(shell_no):
-    df_updated_model_shell = pd.DataFrame(data = {'SHELL#': shell_no, 'BLOCK#': all_blocks, out_property_header: 0.})    
+    df_model_arr = np.array(df_model)
+    df_updated_model_shell = np.array(pd.DataFrame(data = {'SHELL#': shell_no, 'BLOCK#': all_blocks, out_property_header: 0.}))
+    cols = ['SECTOR', out_property_header, 'GAUSS_WEIGHT']
+    special_weight_id = 3
+    special_weight_ids = []
+    for special_weight in layer_special_weights:
+        cols.append(special_weight)
+        special_weight_ids.append(special_weight_id)
+        special_weight_id += 1
+        
     for block_no in all_blocks:
         df_smoothing = pd.read_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}/block_{block_no}.csv')
+        df_smoothing = df_smoothing[cols]
+        df_smoothing = np.array(df_smoothing)
 
         # ONLY ENTER THE SMOOTHING LOOP if there is at least one segment in df_smoothing.
         # otherwise, if there are 0 paths, don't bother smoothing and just use the value of the current block.
         if len(df_smoothing) > 0:
             # make a histogram of all of the sectors in df_smoothing
-            unique_path_segment_sectors_hist = np.histogram(df_smoothing['SECTOR'], bins = np.arange(1, mod_input.azimuthal_sectors + 2, 1))[0]
-    
+            unique_path_segment_sectors_hist = np.histogram(df_smoothing.T[0], bins = np.arange(1, mod_input.azimuthal_sectors + 2, 1))[0]
+        
             # azimuthal smoothing is an option in mod_input. if it's on, also include azimuthal information in smoothing.
             # if not, just include gaussian weights based on distance to the center of each path segment in df_smoothing.
             if layer_azimuthal_weighting == True:
@@ -323,34 +429,32 @@ def model_smoothing(shell_no):
 
                 # loop through each of the six values in unique_path_segment_sectors_hist
                 for path_sectors in range(len(unique_path_segment_sectors_hist)):
-
+        
                     # for each of those values, determine whether or not the value is 0
                     paths_in_sector = unique_path_segment_sectors_hist[path_sectors]
 
                     # if the value is not 0 (i.e., if there are 1 or more paths in the radius within the current sector) then compute a mean
                     if paths_in_sector > 0:
                         azimuthal_denominator += 1.
-
+        
                         # slice df_smoothing to have just the path segments in the current path sector
-                        df_final_smoothing = df_smoothing.loc[df_smoothing['SECTOR'] == (path_sectors + 1)]
+                        df_final_smoothing = df_smoothing[np.isin(df_smoothing.T[0], (path_sectors + 1))]
                         pre_az_numerator = 0.
                         pre_az_denominator = 0.
 
                         for segment_final in range(len(df_final_smoothing)):
                             weights = []
-                            segment_final_pert = df_final_smoothing[out_property_header].iloc[segment_final]
-                            weights.append(df_final_smoothing['GAUSS_WEIGHT'].iloc[segment_final])
-                            if layer_path_length_weighting == True:
-                                weights.append(df_final_smoothing['PATH_LENGTH_KM'].iloc[segment_final])
-                                
-                            for special_weight in layer_special_weights:
-                                weight = df_final_smoothing[special_weight].iloc[segment_final]
+                            segment_final_pert = df_final_smoothing[segment_final, 1]
+                            weights.append(df_final_smoothing[segment_final, 2])
+
+                            for special_weight_idx in special_weight_ids:
+                                weight = df_final_smoothing[segment_final, special_weight_idx]
                                 
                                 if math.isnan(weight) == False and weight != 0.:
                                     weights.append(weight)
 
                             if math.isnan(segment_final_pert) == False:
-                                pre_az_numerator += (segment_final_pert * np.prod(weight))
+                                pre_az_numerator += (segment_final_pert * np.prod(weights))
                                 pre_az_denominator += (np.prod(weights))
 
                         # compute the final weighted average for the current sector, considering path segmenth length,...
@@ -368,16 +472,14 @@ def model_smoothing(shell_no):
             elif layer_azimuthal_weighting == False:
                 smoothing_numerator = 0.
                 smoothing_denominator = 0.
-
+        
                 for segment_final in range(len(df_smoothing)):
                     weights = []
-                    segment_final_pert = df_smoothing[out_property_header].iloc[segment_final]
-                    weights.append(df_smoothing['GAUSS_WEIGHT'].iloc[segment_final])
-                    if layer_path_length_weighting == True:
-                        weights.append(df_smoothing['PATH_LENGTH_KM'].iloc[segment_final])
-                        
-                    for special_weight in layer_special_weights:
-                        weight = df_smoothing[special_weight].iloc[segment_final]
+                    segment_final_pert = df_smoothing[segment_final, 1]
+                    weights.append(df_smoothing[segment_final, 2])
+                    
+                    for special_weight_idx in special_weight_ids:
+                        weight = df_smoothing[segment_final, special_weight_idx]
                         
                         if math.isnan(weight) == False and weight != 0.:
                             weights.append(weight)
@@ -385,15 +487,19 @@ def model_smoothing(shell_no):
                     if math.isnan(segment_final_pert) == False:
                         smoothing_numerator += (segment_final_pert * np.prod(weights))
                         smoothing_denominator += (np.prod(weights))
-
+        
                 if smoothing_denominator != 0.:
                     mean_element_perturbation = smoothing_numerator / smoothing_denominator
         else:
-            mean_element_perturbation = float(df_model.loc[(df_model['SHELL#'] == shell_no) & (df_model['BLOCK#'] == block_no)][out_property_header])
+            mean_element_perturbation_idx = np.where((df_model_arr.T[0] == shell_no) & (df_model_arr.T[1] == block_no))[0][0]
+            mean_element_perturbation = df_model_arr[mean_element_perturbation_idx, -1]
+    
+        element_idx = np.where((df_updated_model_shell.T[0] == shell_no) & (df_updated_model_shell.T[1] == block_no))[0][0]
+        df_updated_model_shell[element_idx, -1] = mean_element_perturbation
 
-        element_idx = df_updated_model_shell.loc[(df_updated_model_shell['SHELL#'] == shell_no) & (df_updated_model_shell['BLOCK#'] == block_no)].index
-        df_updated_model_shell.loc[element_idx, out_property_header] = mean_element_perturbation
-
+    df_updated_model_shell = pd.DataFrame(df_updated_model_shell, columns = ['SHELL#', 'BLOCK#', out_property_header])
+    df_updated_model_shell['SHELL#'] = df_updated_model_shell['SHELL#'].astype(int)
+    df_updated_model_shell['BLOCK#'] = df_updated_model_shell['BLOCK#'].astype(int)
     df_updated_model_shell.to_csv(f'{iteration_directory_path}/{model}_updated_shell_{shell_no}.csv', index = False)
     
     
@@ -413,119 +519,129 @@ def merge_block_files(shell_no):
 
 def update_smoothing_block(shell_no):
     df_updated_shell = pd.read_csv(f'{block_centric_path}/shell_{shell_no}.csv')
-    df_smoothing_radii = pd.read_csv(f'{layer_directory}/shell_{shell_no}_smoothing_radii.csv')
+    df_smoothing_radii = np.array(pd.read_csv(f'{layer_directory}/shell_{shell_no}_smoothing_radii.csv'))
+    cols = list(df_updated_shell.columns)
+    cols.append('GAUSS_WEIGHT')
+    
     for block_no in all_blocks:
-        block_center_lat = float(df_blocks.loc[df_blocks['BLOCK#'] == block_no]['CENTER_LAT'])
-        block_center_lon = float(df_blocks.loc[df_blocks['BLOCK#'] == block_no]['CENTER_LON'])
-
-        block_smoothing_radius = float(df_smoothing_radii.loc[df_smoothing_radii['BLOCK#'] == block_no]['RADIUS'])
+        # find the center lat/lon of the current block
+        block_center_lat = mod_database.get_block_info(block_no)[6]
+        block_center_lon = mod_database.get_block_info(block_no)[7]
+    
+        # find the block's smoothing radius
+        block_smoothing_radius_idx = np.where(df_smoothing_radii.T[0] == block_no)[0]
+        block_smoothing_radius = df_smoothing_radii[block_smoothing_radius_idx, 1][0]
+    
+        # open the file with all of the raypath segments to be smoothed for this block
         df_smoothing_block = pd.read_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}/block_{block_no}.csv')
         neighbors = df_smoothing_block['NEIGHBOR'].unique()
-        
         df_smoothing_block = df_smoothing_block.drop(df_smoothing_block.index)
-        
+    
         for neighbor in neighbors:
             df_updated_block = df_updated_shell.loc[df_updated_shell['BLOCK#'] == neighbor].rename(columns = {'BLOCK#': 'NEIGHBOR'})
             df_smoothing_block = pd.concat([df_smoothing_block, df_updated_block])
         df_smoothing_block = df_smoothing_block.reset_index(drop = True)
         df_smoothing_block['GAUSS_WEIGHT'] = 0.
+        df_smoothing_block = np.array(df_smoothing_block)
             
         for segment_id in range(len(df_smoothing_block)):
-            segment_center_lat = df_smoothing_block['CENTER_LAT'].iloc[segment_id]
-            segment_center_lon = df_smoothing_block['CENTER_LON'].iloc[segment_id]
+            segment_center_lat = df_smoothing_block[segment_id, 4]
+            segment_center_lon = df_smoothing_block[segment_id, 5]
             
             dist_to_center = mod_geo.GCP_length(block_center_lat, block_center_lon, segment_center_lat, segment_center_lon)
             gaus_weight = gaussian(block_smoothing_radius, dist_to_center, layer_gaussian_cutoff_weight)
-            df_smoothing_block.loc[segment_id, 'GAUSS_WEIGHT'] = gaus_weight
+            if gaus_weight == 0.:
+                print(gaus_weight)
+            df_smoothing_block[segment_id, -1] = gaus_weight
+    
+        df_smoothing_block = pd.DataFrame(df_smoothing_block, columns = cols).rename(columns = {'BLOCK#': 'NEIGHBOR'})
+        df_smoothing_block['NEIGHBOR'] = df_smoothing_block['NEIGHBOR'].astype(int)
+        df_smoothing_block['PATH_ID'] = df_smoothing_block['PATH_ID'].astype(int)
+        df_smoothing_block['SECTOR'] = df_smoothing_block['SECTOR'].astype(int)
         
         df_smoothing_block.to_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}/block_{block_no}.csv', index = False)
 
 
 def find_smoothing_radii(shell_no):
-    df_shell_smoothing_radii = pd.DataFrame(data = {'BLOCK#': list(all_blocks), 'RADIUS': 0.})
     df_shell_elements = pd.read_csv(f'{block_centric_path}/shell_{shell_no}.csv')
+    df_shell_smoothing_radii = np.array(pd.DataFrame(data = {'BLOCK#': list(all_blocks), 'RADIUS': 0.}))
+    df_shell_elements['GAUSS_WEIGHT'] = 0.
+    cols = list(df_shell_elements.columns)
     
     for block_no in all_blocks:
-        # df_element has the information for the current element of all of the path segments that have gone through that element for all of the update phases
-        element_center_lat = float(df_blocks.loc[df_blocks['BLOCK#'] == block_no]['CENTER_LAT'])
-        element_center_lon = float(df_blocks.loc[df_blocks['BLOCK#'] == block_no]['CENTER_LON'])
-        df_neighbors = pd.read_csv(f'./{mod_input.near_neighbors_directory}/block_{block_no}_neighbors.csv')
+        # access the main neighbors file for this block.
+        element_center_lat = mod_database.get_block_info(block_no)[6]
+        element_center_lon = mod_database.get_block_info(block_no)[7]
+        df_neighbors = np.array(pd.read_csv(f'./{mod_input.near_neighbors_directory}/block_{block_no}_neighbors.csv'))
 
+        radius_found = False
         for radius in layer_smoothing_radii:
-            # find block centers within the current radius, INCLUDING the current element
-            # grab these from the near_neighbors.csv file.
-            # df_near_neighbors is a slice of the neighbors.csv file that has only the near neighbors within the current working radius
-            df_near_neighbors = df_neighbors.loc[df_neighbors['RADIUS_DEG'] <= radius]
-            eligible_blocks = df_near_neighbors['NEIGHBOR']
-            
-            df_smoothing = pd.DataFrame()
-            for neighbor in eligible_blocks:
-                df_neighbor = df_shell_elements.loc[df_shell_elements['BLOCK#'] == neighbor].rename(columns = {'BLOCK#': 'NEIGHBOR'})
-                df_smoothing = pd.concat([df_smoothing, df_neighbor])
-            df_smoothing = df_smoothing.reset_index(drop = True)
+            # find near neighbors that fall within the current working radius and make a dataframe with all of the paths that sample those neighbors (df_smoothing)
+            near_neighbor_indices = np.where(df_neighbors.T[1] <= radius)[0]
+            eligible_blocks = df_neighbors[near_neighbor_indices, 0]
+            df_smoothing = df_shell_elements.loc[df_shell_elements['BLOCK#'].isin(eligible_blocks)].reset_index(drop = True)
 
-            # df_unique_paths is a dataframe that has the total number of segments for each full path within the current radius.
-            df_unique_paths = df_smoothing.groupby(['PHASE','PATH_ID']).size().reset_index().rename(columns = {0: 'TOTAL_SEGMENTS'})
-            df_unique_paths['SECTOR'] = 0
-            
-            # test to see if all of those blocks meet the criteria we define
-            # first, check if there are enough paths in general in the radius
-            total_paths_in_radius = len(df_unique_paths)
+            # if the current radius is equal to the maximum radius, just define df_smoothing based on that radius and don't faff with the other criteria
+            if radius == layer_max_radius:
+                radius_found = True
 
-            # if there aren't, check the next radius
-            if (total_paths_in_radius < layer_total_required_paths) and (radius < layer_max_radius):
-                pass
-
-            elif (total_paths_in_radius < layer_total_required_paths) and (radius == layer_max_radius):
-                break
-
-            # if there are, then check the azimuthal coverage requirements:
+            # if not, check coverage criteria
             else:
-                for unique_path_idx in range(len(df_unique_paths)):
-                    unique_path_phase = df_unique_paths['PHASE'].iloc[unique_path_idx]
-                    unique_path_id = df_unique_paths['PATH_ID'].iloc[unique_path_idx]
-                    unique_path_azimuth = df_smoothing.loc[(df_smoothing['PHASE'] == unique_path_phase) & (df_smoothing['PATH_ID'] == unique_path_id)]['AZIMUTH'].mean()
-                    unique_path_sector = azimuthal_sector(unique_path_azimuth)
-                    df_unique_paths.loc[unique_path_idx, 'SECTOR'] = unique_path_sector
-
-                unique_path_sectors_hist = np.histogram(df_unique_paths['SECTOR'], bins = np.arange(1, mod_input.azimuthal_sectors + 2, 1))[0]
-
-                # count how many sectors are covered
-                total_sectors_covered = 0
-                for count in unique_path_sectors_hist:
-                    if count > 0:
-                        total_sectors_covered += 1
-
-                # if the total number of sectors covered meets or exceeds the set threshold, OR the radius is at its maximum allowed, then set sufficient coverage to True
-                if (total_sectors_covered >= layer_total_required_azimuths) or (radius == layer_max_radius):
-                    break
-
-                # otherwise, coverage is still insufficient
-                else:
+                # df_unique_paths is a dataframe that has the total number of segments for each full path within the current radius.
+                df_unique_paths = df_smoothing[['PHASE', 'PATH_ID', 'AZIMUTH']].groupby(['PHASE','PATH_ID']).mean()['AZIMUTH']
+                
+                # first, check if there are enough total paths in the radius:
+                # if there aren't, move on to the next radius
+                if len(df_unique_paths) < layer_total_required_paths:
                     pass
+                
+                else:
+                    sectors_covered = []
+
+                    # find the azimuthal sector of each unique path azimuth
+                    for unique_az in df_unique_paths:
+                        unique_path_sector = azimuthal_sector(unique_az)
+
+                        # if that sector isn't yet represented, append it to sectors_covered
+                        if unique_path_sector not in sectors_covered:
+                            sectors_covered.append(unique_path_sector)
+
+                            # if the number of sectors covered meets the criteria, break
+                            if len(sectors_covered) >= layer_total_required_azimuths:
+                                radius_found = True
+                                break
+                            
+            if radius_found == True:
+                break
 
         # now that the smoothing radius and the paths/path segments within that smoothing radius for the current block has been determined, find the Gaussian weights for each of those segments
         if len(df_smoothing) > 0:
             # find the Gaussian weight for all segments in the radius to be smoothed (i.e., all segments in df_smoothing)
-            df_smoothing['GAUSS_WEIGHT'] = 0.
+            df_smoothing = np.array(df_smoothing)
+            
             for unique_path_segment in range(len(df_smoothing)):
-
-                unique_path_segment_center_lat = df_smoothing['CENTER_LAT'].iloc[unique_path_segment]
-                unique_path_segment_center_lon = df_smoothing['CENTER_LON'].iloc[unique_path_segment]
-
+                unique_path_segment_center_lat = df_smoothing[unique_path_segment, 4]
+                unique_path_segment_center_lon = df_smoothing[unique_path_segment, 5]
+    
                 # find the distance from the center of the current element to the center of the path segment
                 dist_to_center = mod_geo.GCP_length(element_center_lat, element_center_lon, unique_path_segment_center_lat, unique_path_segment_center_lon)
                 
                 # compute the gaussian weight for that path segment and add it to df_smoothing
                 gaus_weight = gaussian(radius, dist_to_center, layer_gaussian_cutoff_weight)
-                df_smoothing.loc[unique_path_segment, 'GAUSS_WEIGHT'] = gaus_weight
-                
+                df_smoothing[unique_path_segment, -1] = gaus_weight
+    
+        df_smoothing = pd.DataFrame(df_smoothing, columns = cols).rename(columns = {'BLOCK#': 'NEIGHBOR'})
+        df_smoothing['NEIGHBOR'] = df_smoothing['NEIGHBOR'].astype(int)
+        df_smoothing['PATH_ID'] = df_smoothing['PATH_ID'].astype(int)
+        df_smoothing['SECTOR'] = df_smoothing['SECTOR'].astype(int)
         df_smoothing.to_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}/block_{block_no}.csv', index = False)
-
-        smoothing_idx = df_shell_smoothing_radii.loc[df_shell_smoothing_radii['BLOCK#'] == block_no].index
-        df_shell_smoothing_radii.loc[smoothing_idx, 'RADIUS'] = radius
+        
+        smoothing_idx = np.where(df_shell_smoothing_radii.T[0] == block_no)
+        df_shell_smoothing_radii[smoothing_idx, 1] = radius
+        
+    df_shell_smoothing_radii = pd.DataFrame(df_shell_smoothing_radii, columns = ['BLOCK#', 'RADIUS'])
+    df_shell_smoothing_radii['BLOCK#'] = df_shell_smoothing_radii['BLOCK#'].astype(int)
     df_shell_smoothing_radii.to_csv(f'{layer_directory}/shell_{shell_no}_smoothing_radii.csv', index = False)
-
 
 
 ########################
@@ -549,6 +665,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
     layer_top_shell = mod_input.layer_top_shells[layers_complete]
     layer_stripping_depth = mod_database.get_shell_info(layer_bottom_shell)[3]
     layer_depth_min = mod_database.get_shell_info(layer_top_shell)[1]
+    layer_remove_mean = mod_input.remove_residual_mean[layers_complete]
     freeze_previous_layer = mod_input.freeze_previous_layers[layers_complete]
     phases_to_update = mod_input.update_phases[layers_complete]
     type_of_data_subselection = mod_input.type_of_phase_subselection[layers_complete]
@@ -564,7 +681,6 @@ for layer_bottom_shell in mod_input.layer_base_shells:
     layer_total_required_azimuths = mod_input.total_required_azimuths[layers_complete]
     layer_gaussian_cutoff_weight = mod_input.gaussian_cutoff_weight[layers_complete]
     layer_azimuthal_weighting = mod_input.azimuthal_weighting[layers_complete]
-    layer_path_length_weighting = mod_input.path_length_weighting[layers_complete]
     layer_special_weights = mod_input.special_weights[layers_complete]
     layer_residual_header = mod_input.residual_header[layers_complete]
     layer_dataset_description = mod_input.dataset_description[layers_complete]
@@ -575,34 +691,6 @@ for layer_bottom_shell in mod_input.layer_base_shells:
     
     # write to model update log
     if os.path.exists(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/model_update_log_{model}.csv'):
-    with open(f'./test_log.csv', 'a') as fout:
-        fout.write(f'{job_id},')
-        fout.write(f'{layers_complete} of {len(mod_input.layer_base_shells)},')
-        fout.write(f'{model},')
-        fout.write(f'{mod_input.starting_RMS_model_to_use},')
-        fout.write(f'{mod_input.reference_model},')
-        fout.write(f'{layer_dataset_description},')
-        fout.write(f'{layer_residual_header},')
-        fout.write(f"[{';'.join(str(i) for i in phases_to_update)}],")
-        fout.write(f'{type_of_data_subselection},')
-        fout.write(f"[{';'.join(str(i) for i in subselection_of_phases_to_update)}],")
-        fout.write(f"[{';'.join(str(i) for i in layer_residual_limits)}],")
-        fout.write(f'{layer_depth_min} km - {layer_stripping_depth} km,')
-        fout.write(f'{iteration_to_stop_RMS},')
-        fout.write(f'{layer_cutoff_type},')
-        fout.write(f'{layer_cutoff},')
-        fout.write(f'{mod_input.azimuthal_sectors},')
-        fout.write(f'{layer_azimuthal_weighting},')
-        fout.write(f'{layer_path_length_weighting},')
-        fout.write(f"[{';'.join(str(i) for i in layer_special_weights)}],")
-        fout.write(f"[{';'.join(str(i) for i in layer_smoothing_radii)}],")
-        fout.write(f'{layer_total_required_paths},')
-        fout.write(f'{layer_total_required_azimuths},')
-        fout.write(f'{layer_gaussian_cutoff_weight},')
-
-    else:
-        with open(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/model_update_log_{model}.csv', 'w') as fout:
-            fout.write('PID,Layer,Input_model,Input_RMS,Reference_model,Dataset_description,Residual_header,Phases_used,Type_of_phase_subselection,Phase_subselection,Residual_limits,Layer_dimensions,Stopped_RMS_weighting_iteration,Cutoff_type,Cutoff,Azimuthal_sectors,Azimuthal_weighting,Path_length_weighting,Special_weights,Smoothing_radii,Total_required_paths,Total_required_sectors,Gaussian_cutoff_weight\n')
         with open(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/model_update_log_{model}.csv', 'a') as fout:
             fout.write(f'{job_id},')
             fout.write(f'{layers_complete} of {len(mod_input.layer_base_shells)},')
@@ -611,6 +699,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
             fout.write(f'{mod_input.reference_model},')
             fout.write(f'{layer_dataset_description},')
             fout.write(f'{layer_residual_header},')
+            fout.write(f'{layer_remove_mean},')
             fout.write(f"[{';'.join(str(i) for i in phases_to_update)}],")
             fout.write(f'{type_of_data_subselection},')
             fout.write(f"[{';'.join(str(i) for i in subselection_of_phases_to_update)}],")
@@ -621,12 +710,39 @@ for layer_bottom_shell in mod_input.layer_base_shells:
             fout.write(f'{layer_cutoff},')
             fout.write(f'{mod_input.azimuthal_sectors},')
             fout.write(f'{layer_azimuthal_weighting},')
-            fout.write(f'{layer_path_length_weighting},')
             fout.write(f"[{';'.join(str(i) for i in layer_special_weights)}],")
             fout.write(f"[{';'.join(str(i) for i in layer_smoothing_radii)}],")
             fout.write(f'{layer_total_required_paths},')
             fout.write(f'{layer_total_required_azimuths},')
-            fout.write(f'{layer_gaussian_cutoff_weight},')
+            fout.write(f'{layer_gaussian_cutoff_weight}\n')
+
+    else:
+        with open(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/model_update_log_{model}.csv', 'w') as fout:
+            fout.write('PID,Layer,Input_model,Input_RMS,Reference_model,Dataset_description,Residual_header,Remove_mean,Phases_used,Type_of_phase_subselection,Phase_subselection,Residual_limits,Layer_dimensions,Stopped_RMS_weighting_iteration,Cutoff_type,Cutoff,Azimuthal_sectors,Azimuthal_weighting,Special_weights,Smoothing_radii,Total_required_paths,Total_required_sectors,Gaussian_cutoff_weight\n')
+        with open(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/model_update_log_{model}.csv', 'a') as fout:
+            fout.write(f'{job_id},')
+            fout.write(f'{layers_complete} of {len(mod_input.layer_base_shells)},')
+            fout.write(f'{model},')
+            fout.write(f'{mod_input.starting_RMS_model_to_use},')
+            fout.write(f'{mod_input.reference_model},')
+            fout.write(f'{layer_dataset_description},')
+            fout.write(f'{layer_residual_header},')
+            fout.write(f'{layer_remove_mean},')
+            fout.write(f"[{';'.join(str(i) for i in phases_to_update)}],")
+            fout.write(f'{type_of_data_subselection},')
+            fout.write(f"[{';'.join(str(i) for i in subselection_of_phases_to_update)}],")
+            fout.write(f"[{';'.join(str(i) for i in layer_residual_limits)}],")
+            fout.write(f'{layer_depth_min} km - {layer_stripping_depth} km,')
+            fout.write(f'{iteration_to_stop_RMS},')
+            fout.write(f'{layer_cutoff_type},')
+            fout.write(f'{layer_cutoff},')
+            fout.write(f'{mod_input.azimuthal_sectors},')
+            fout.write(f'{layer_azimuthal_weighting},')
+            fout.write(f"[{';'.join(str(i) for i in layer_special_weights)}],")
+            fout.write(f"[{';'.join(str(i) for i in layer_smoothing_radii)}],")
+            fout.write(f'{layer_total_required_paths},')
+            fout.write(f'{layer_total_required_azimuths},')
+            fout.write(f'{layer_gaussian_cutoff_weight}\n')
 
     layer_directory = f'{update_path}/layer_{layers_complete}_shell_{layer_top_shell}_to_{layer_bottom_shell}'
     try:
@@ -636,7 +752,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
 
     for shell_no in all_shells:
         with open(f'{block_centric_path}/shell_{shell_no}.csv', 'w') as file:
-            file.write(f'BLOCK#,PHASE,PATH_ID,PATH_LENGTH_KM,{out_property_header},AZIMUTH,SECTOR\n')
+            file.write(f'BLOCK#,PHASE,PATH_ID,PATH_LENGTH_KM,CENTER_LAT,CENTER_LON,{out_property_header},AZIMUTH,SECTOR\n')
     
     # loop through all of the paths for all of the phases to be updated in this layer and split them up into smaller lists for multiprocessing.
     with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
@@ -648,12 +764,15 @@ for layer_bottom_shell in mod_input.layer_base_shells:
         phase = phases_to_update[phase_idx]
         phase_subselection = subselection_of_phases_to_update[phase_idx]
         phase_name = phase.split('_')[0]
-        all_paths = glob.glob(f'./{mod_input.phases_directory}/{phase}/{mod_input.paths_directory}/{phase_name}_*.csv')
+        all_paths = glob.glob(f'./{mod_input.phases_directory}/{phase}/{mod_input.resampled_directory}/{phase_name}_*.csv')
         if type_of_data_subselection == 'proportion':
             subset_of_paths = int(len(all_paths) * phase_subselection)
             paths = random.sample(all_paths, subset_of_paths)
         elif type_of_data_subselection == 'number':
-            paths = random.sample(all_paths, phase_subselection)
+            if len(all_paths) < phase_subselection:
+                paths = all_paths
+            else:
+                paths = random.sample(all_paths, phase_subselection)
 
         # append all paths to the main `paths_list`
         for path in paths:
@@ -699,8 +818,6 @@ for layer_bottom_shell in mod_input.layer_base_shells:
     # make a temporary directory for all of the different jobs that will run for backmapping and path>block centric conversion. these will be merged once the process is complete
     for list_index in range(len(paths_lists)):
         try:
-            with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                fout.write(f'- Making temporary block info files: batch {list_index + 1} of {len(paths_lists)}\n')
             os.mkdir(f'{layer_directory}/tmp_block_info_idx_{list_index}')
         except:
             pass
@@ -709,6 +826,50 @@ for layer_bottom_shell in mod_input.layer_base_shells:
     unexplained_stds = []
     unexplained_vars = []
     total_paths_itr = []
+
+    ## PART 0: remove the mean from the residuals of each event based on the starting tomography model
+    if layer_remove_mean == True:
+        with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+            fout.write(f'- Start removing mean from residuals for a proxy event relocation\n')
+        rm_mean_start = time.time()
+        
+        if __name__ == '__main__':
+            process_list = []
+            process_idx = 0
+            for list_index in range(len(paths_lists)):
+                process_idx += 1
+                p = mp.Process(target = remove_mean, args = (paths_lists[list_index], list_index,))
+                p.start()
+                process_list.append(p)
+    
+            for process in process_list:
+                process.join()
+        
+        df_pred = pd.DataFrame(columns = ['EQ_DATE', 'EQ_LAT', 'EQ_LON', 'PATH_ID', 'PHASE', layer_residual_header, 'DATASET', 'DT_PRED'])
+        for list_index in range(len(paths_lists)):
+            df_pred_idx = pd.read_csv(f'{layer_directory}/tmp_pred_residuals_{list_index}.csv')
+            df_pred = pd.concat([df_pred, df_pred_idx])
+            os.remove(f'{layer_directory}/tmp_pred_residuals_{list_index}.csv')
+    
+        df_events = df_pred.groupby(['EQ_DATE', 'EQ_LAT', 'EQ_LON', 'DATASET']).size().reset_index().drop(columns = [0])
+        df_events['MEAN_DT'] = 0.
+        df_events = np.array(df_events)
+        for line in range(len(df_events)):
+            eq_date = df_events[line, 0]
+            eq_lat = df_events[line, 1]
+            eq_lon = df_events[line, 2]
+            dataset = df_events[line, 3]
+            df_pred_slice = df_pred.loc[(df_pred['EQ_DATE'] == eq_date) & (df_pred['EQ_LAT'] == eq_lat) & (df_pred['EQ_LON'] == eq_lon) & (df_pred['DATASET'] == dataset)]
+            df_events[line, -1] = df_pred_slice['DT_PRED'].mean()
+    
+        df_events = pd.DataFrame(df_events, columns = ['EQ_DATE', 'EQ_LAT', 'EQ_LON', 'DATASET', 'MEAN_DT'])
+        df_events.to_csv(f'{layer_directory}/mean_event_residuals.csv', index = False)
+        df_events = np.array(df_events).T
+        
+        rm_mean_time = time.time() - rm_mean_start
+    
+        with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+            fout.write(f'- Finished removing mean; runtime: {round(rm_mean_time / 60, 1)} minutes / {round((rm_mean_time / 60) / 60, 1)} hours\n')
 
     ############################################
     # START WHILE LOOP FOR CURRENT MODEL LAYER #
@@ -740,7 +901,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
         if iteration_to_stop_RMS != None and iteration_to_stop_RMS <= layer_iteration:
             df_rms[RMS_header] = 1.
             df_rms[f'NORM_{RMS_header}'] = 1.
-
+        
         ############################################
         # PART 1: BACKMAP RESIDUALS INTO RAYPATHS. #
         ############################################
@@ -753,8 +914,6 @@ for layer_bottom_shell in mod_input.layer_base_shells:
             process_idx = 0
             for list_index in range(len(paths_lists)):
                 process_idx += 1
-                with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                    fout.write(f'  - Starting process {process_idx} of {len(paths_lists)}')
                 p = mp.Process(target = backmap_residual, args = (paths_lists[list_index], list_index,))
                 p.start()
                 process_list.append(p)
@@ -765,7 +924,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
         backmapping_time = time.time() - backmapping_start
 
         with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-            fout.write(f'- Finished backmapping and converting from path-to-block format; runtime: {backmapping_time / 60} minutes / {(backmapping_time / 60) / 60} hours\n')
+            fout.write(f'- Finished backmapping and converting from path-to-block format; runtime: {round(backmapping_time / 60, 1)} minutes / {round((backmapping_time / 60) / 60, 1)} hours\n')
 
         
         ## Merge all files for the different processes into the main block files:
@@ -777,8 +936,6 @@ for layer_bottom_shell in mod_input.layer_base_shells:
             merge_process_list = []
 
             for shell_no in shells_to_update:
-                with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                    fout.write(f'  - Starting process for shell {shell_no}; total of {len(shells_to_update)} shells to merge\n')
                 p = mp.Process(target = merge_block_files, args = (shell_no,))
                 p.start()
                 merge_process_list.append(p)
@@ -788,7 +945,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
 
         merge_time = time.time() - merge_start
         with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-            fout.write(f'- Finished merging temporary block files into main block files; runtime: {merge_time} seconds / {merge_time / 60} minutes\n')
+            fout.write(f'- Finished merging temporary block files into main block files; runtime: {round(merge_time, 1)} seconds / {round(merge_time / 60, 1)} minutes\n')
         
         
         #### NOW, ALL OF THE BACKMAPPED PATHS ARE SAVED ####
@@ -830,18 +987,18 @@ for layer_bottom_shell in mod_input.layer_base_shells:
                     continue_layer_iterating = False
 
             elif layer_cutoff_type == 'total iterations':
-                if layer_iteration == layer_cutoff + 1
+                if layer_iteration == layer_cutoff + 1:
                     continue_layer_iterating = False
 
         if continue_layer_iterating == False:
             with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                fout.write(f'- Finished computing variance: {residual_time} seconds; threshold reached and layer update ended\n')
+                fout.write(f'- Finished computing variance: {round(residual_time, 1)} seconds; threshold reached and layer update ended\n')
             shutil.rmtree(iteration_directory_path)
             
         elif continue_layer_iterating == True:
             residual_time = time.time() - residual_start
             with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                fout.write(f'- Finished computing variance: {residual_time} seconds; threshold not yet reached\n')
+                fout.write(f'- Finished computing variance: {round(residual_time, 1)} seconds; threshold not yet reached\n')
             
             with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
                 fout.write(f'- * backmapping COMPLETE for all phases\n')
@@ -861,8 +1018,6 @@ for layer_bottom_shell in mod_input.layer_base_shells:
                 if __name__ == '__main__':
                     find_radii_process_list = []
                     for shell_no in shells_to_update:
-                        with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                            fout.write(f'  - Starting process for shell {shell_no}; total: {len(shells_to_update)} shells to update\n')
                         try:
                             os.mkdir(f'{layer_directory}/smoothing_block_information/shell_{shell_no}')
                         except:
@@ -877,7 +1032,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
                 smoothing_radii_time = time.time() - smoothing_radii_start
     
                 with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                    fout.write(f'- Finished finding smoothing radii; runtime: {smoothing_radii_time / 60} minutes / {(smoothing_radii_time / 60) / 60} hours\n')
+                    fout.write(f'- Finished finding smoothing radii; runtime: {round(smoothing_radii_time / 60, 1)} minutes / {round((smoothing_radii_time / 60) / 60, 1)} hours\n')
     
             else:
                 with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
@@ -887,8 +1042,6 @@ for layer_bottom_shell in mod_input.layer_base_shells:
                 if __name__ == '__main__':
                     smoothing_update_list = []
                     for shell_no in shells_to_update:
-                        with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                            fout.write(f'  - Starting process for shell {shell_no}; total: {len(shells_to_update)} shells to update\n')
                         p = mp.Process(target = update_smoothing_block, args = (shell_no,))
                         p.start()
                         smoothing_update_list.append(p)
@@ -898,7 +1051,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
     
                 smoothing_radii_time = time.time() - smoothing_radii_start
                 with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                    fout.write(f'- Finished updating smoothing blocks; runtime: {smoothing_radii_time / 60} minutes / {(smoothing_radii_time / 60) / 60} hours\n')
+                    fout.write(f'- Finished updating smoothing blocks; runtime: {round(smoothing_radii_time / 60, 1)} minutes / {round((smoothing_radii_time / 60) / 60, 1)} hours\n')
             
         
             # now, go directly to smoothing. loop through each block in each shell and grab the information in the shell_{shell}/block_{block} file.
@@ -909,8 +1062,6 @@ for layer_bottom_shell in mod_input.layer_base_shells:
                 smoothing_process_list = []
                 for shell_no in all_shells:
                     if shell_no in shells_to_update:
-                        with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                            fout.write(f'  - Starting process for shell {shell_no}; total of {len(shells_to_update)} to smooth\n')
                         p = mp.Process(target = model_smoothing, args = (shell_no,))
                         p.start()
                         smoothing_process_list.append(p)
@@ -924,7 +1075,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
     
             smoothing_time = time.time() - smoothing_start
             with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                fout.write(f'- Finished model smoothing; runtime: {smoothing_time} seconds / {smoothing_time / 60} minutes\n')
+                fout.write(f'- Finished model smoothing; runtime: {round(smoothing_time, 1)} seconds / {round(smoothing_time / 60, 1)} minutes\n')
     
             
             df_model = df_model.drop(df_model.index)
@@ -998,8 +1149,8 @@ for layer_bottom_shell in mod_input.layer_base_shells:
                     for lon in lons:
                         # find the block that the current lat/lon pair falls in
                         block = mod_database.find_block_id(lat, lon)
-                        original_perturb = float(df_og_shell_data.loc[df_og_shell_data['BLOCK#'] == block][out_property_header])
-                        updated_perturb = float(df_model_shell_data.loc[df_model_shell_data['BLOCK#'] == block][out_property_header])
+                        original_perturb = float(df_og_shell_data.loc[df_og_shell_data['BLOCK#'] == block][out_property_header].iloc[0])
+                        updated_perturb = float(df_model_shell_data.loc[df_model_shell_data['BLOCK#'] == block][out_property_header].iloc[0])
                         diff_perturb = updated_perturb - original_perturb
                         if layer_iteration == 1:
                             radius = int(df_model_radii.loc[df_model_radii['BLOCK#'] == block]['RADIUS']) - 0.1
@@ -1027,15 +1178,15 @@ for layer_bottom_shell in mod_input.layer_base_shells:
             iteration_time = time.time() - iteration_start
 
             with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                fout.write(f'total time for iteration: {iteration_time / 60} minutes / {iteration_time / 60 / 60} hours\n')
-                fout.write(f'total time for backmapping & converting from path to block format: {backmapping_time / 60} minutes / {(backmapping_time / 60) / 60} hours\n')
-                fout.write(f'total time for merging all temporary block information into main block files: {merge_time / 60} minutes\n')
-                fout.write(f'total time for compiling all unexplained differences and computing variance: {residual_time / 60} minutes\n')
-                fout.write(f'total time for finding smoothing radii, Gaussian weights, and saving smoothing files OR updating smoothing files: {smoothing_radii_time / 60} minutes / {(smoothing_radii_time / 60) / 60} hours\n')
-                fout.write(f'total time for smoothing: {smoothing_time / 60} minutes\n')
-                fout.write(f'mean time for backmapping per path (total paths: {tot_paths}): {backmapping_time / tot_paths} seconds\n')
-                fout.write(f'mean time for smoothing per shell: {smoothing_time / len(shells_to_update)} seconds\n')
-                fout.write(f'mean time for smoothing per block: {(smoothing_time / len(shells_to_update)) / len(all_blocks)} seconds\n')
+                fout.write(f'total time for iteration: {round(iteration_time / 60, 1)} minutes / {round(iteration_time / 60 / 60, 1)} hours\n')
+                fout.write(f'total time for backmapping & converting from path to block format: {round(backmapping_time / 60, 1)} minutes / {round((backmapping_time / 60) / 60, 1)} hours\n')
+                fout.write(f'total time for merging all temporary block information into main block files: {round(merge_time / 60, 1)} minutes\n')
+                fout.write(f'total time for compiling all unexplained differences and computing variance: {round(residual_time / 60, 1)} minutes\n')
+                fout.write(f'total time for finding smoothing radii, Gaussian weights, and saving smoothing files OR updating smoothing files: {round(smoothing_radii_time / 60, 1)} minutes / {round((smoothing_radii_time / 60) / 60, 1)} hours\n')
+                fout.write(f'total time for smoothing: {round(smoothing_time / 60, 1)} minutes\n')
+                fout.write(f'mean time for backmapping per path (total paths: {tot_paths}): {round(backmapping_time / tot_paths, 1)} seconds\n')
+                fout.write(f'mean time for smoothing per shell: {round(smoothing_time / len(shells_to_update), 1)} seconds\n')
+                fout.write(f'mean time for smoothing per block: {round((smoothing_time / len(shells_to_update)) / len(all_blocks), 1)} seconds\n')
                 # fout.write(f'mean misfit (dataset residual - predicted residual): {unexplained_means[-1]} seconds \n')
                 # fout.write(f'misfit standard deviation: {unexplained_stds[-1]}\n')
                 # fout.write(f'misfit variance: {unexplained_vars[-1]}\n\n\n\n')
@@ -1060,7 +1211,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
     df_smoothing_radii_master.to_csv(f'{layer_directory}/smoothing_radii.csv', index = False)
 
     # df_layer_variance = pd.DataFrame(data = {'layer': layers_complete, 'iteration': list(range(1, len(unexplained_means) + 1, 1)), 'total_paths': total_paths_itr, 'misfit_mean': unexplained_means, 'misfit_std': unexplained_stds, 'misfit_var': unexplained_vars})
-    df_layer_variance = pd.DataFrame(data = {'layer': layers_complete, 'iteration': list(range(0, len(unexplained_means) + 1, 1)), 'total_paths': total_paths_itr, 'misfit_mean': unexplained_means, 'misfit_std': unexplained_stds, 'misfit_var': unexplained_vars})
+    df_layer_variance = pd.DataFrame(data = {'layer': layers_complete, 'iteration': list(range(0, len(unexplained_means), 1)), 'total_paths': total_paths_itr, 'misfit_mean': unexplained_means, 'misfit_std': unexplained_stds, 'misfit_var': unexplained_vars})
     df_variance = pd.concat([df_variance, df_layer_variance])
     df_variance = df_variance.reset_index(drop = True)
     

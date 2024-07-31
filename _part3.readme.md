@@ -19,7 +19,7 @@
 
 
 ## Input variables to define in `mod_input.py`: 
-1. `all_phases`: a list of all phases in the raw dataset, OR a list of the subset of phases in `dataset` you would like to resample raypaths for (it is recommended to do all phases in `dataset`, especially those that have already been processed in `part2`, as the user can define later which phases to include in an update).
+1. `all_phases`: a list of all phases in the raw dataset, OR a list of the subset of phases in `dataset` you would like to resample raypaths for (it is recommended to do all phases in `dataset`, specifically those that have already been processed in `part2`, as the user can define later which phases to include in an update).
 2. `data_wave_type`: the polarity of the waves from which the travel time residuals were measured (i.e., `'S'` or `'P'`.).
 3. `discontinuities`: lateral discontinuities or other desired depth values to include in the resampling routine. points will be found at these depths along all raypaths.
 4. `shell_bounds`: list of boundaries that define constant thickness depth shells. **this should exactly equal the list used to generate `shell_boundaries.csv` in `part1`**.

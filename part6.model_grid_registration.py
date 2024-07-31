@@ -58,8 +58,8 @@ if df_model[lon_header].max() >= 180.:
 with open(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model_name}_update/pt6_log.txt', 'a') as fout:
     fout.write(f'- finding all shell and block IDs for model nodes\n')
 
-df_model['SHELL#'] = 0.
-df_model['BLOCK#'] = 0.
+df_model['SHELL#'] = 0
+df_model['BLOCK#'] = 0
 df_model = np.array(df_model)
 for line in range(len(df_model)):
     model_lat = df_model[line, 0]
@@ -69,10 +69,7 @@ for line in range(len(df_model)):
         pass
     else:
         model_shell = mod_database.find_shell_id(model_depth)
-        try:
-            model_block = mod_database.find_block_id(model_lat, model_lon)
-        except:
-            print(model_lat, model_lon, model_depth)
+        model_block = mod_database.find_block_id(model_lat, model_lon)
         df_model[line, 4] = model_shell
         df_model[line, 5] = model_block
     
@@ -104,21 +101,23 @@ def interpolate_model(shell_no):
     # reregister the model to our grid system by either finding the value at the center of our blocks or making an average of all model values that fall within each block
     df_registered_shell = pd.read_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model_name}_update/tmp_shell_{shell_no}.csv')
     shell_mid = float(df_registered_shell['SHELL_MID'].iloc[0])
+    df_registered_shell = np.array(df_registered_shell)
     for line in range(len(df_registered_shell)):
         block = df_registered_shell[line, 2]
         block_lat_mid = df_registered_shell[line, 3]
         block_lon_mid = df_registered_shell[line, 4]
+
         # first, check to see if there's a model value at this exact point.
-        model_indices = np.where((df_model.T[0] == block_lat_mid) & (df_model.T[1] == block_lon_mid) & (df_model.T[2] == shell_mid))[0]
-        if len(model_indices) == 1:
-            df_registered_shell[line, 5] = df_model[model_indices][0][3]
-        # if there isn't a model value at this exact point, calculate an average of all model values that fall into our block
+        # model_indices = np.where((df_model.T[0] == block_lat_mid) & (df_model.T[1] == block_lon_mid) & (df_model.T[2] == shell_mid))[0]
+        # if len(model_indices) == 1:
+        #     df_registered_shell[line, 5] = df_model[model_indices][0][3]
+        # # if there isn't a model value at this exact point, calculate an average of all model values that fall into our block
+        # else:
+        model_indices = np.where((df_model.T[4] == shell_no) & (df_model.T[5] == block))[0]
+        if len(model_indices) == 0:
+            df_registered_shell[line, 5] = 0.
         else:
-            model_indices = np.where((df_model.T[4] == shell_no) & (df_model.T[5] == block))[0]
-            if len(model_indices) == 0:
-                df_registered_shell[line, 5] = 0.
-            else:
-                df_registered_shell[line, 5] = np.mean(df_model[model_indices, 3])
+            df_registered_shell[line, 5] = np.mean(df_model[model_indices, 3])
 
     if convert == True:
         update_ref_val = mod_refmodels.prem_vel(mod_input.data_wave_type, shell_mid)
@@ -126,7 +125,7 @@ def interpolate_model(shell_no):
             block = df_registered_shell[idx, 2]
             vel = df_registered_shell[idx, 5]
             if vel == 0.:
-                pass
+                updated_perturbation = 0.
             else:
                 updated_perturbation = ((vel / update_ref_val) * 100.) - 100.
             df_registered_shell[idx, 5] = updated_perturbation
@@ -139,7 +138,7 @@ model_registration_start = time.time()
 if __name__ == '__main__':
     process_list = []
     process_idx = 0
-    for shell in all_shells:
+    for shell in all_shells[1:]:
         process_idx += 1
 
         p = mp.Process(target = interpolate_model, args = (shell,))

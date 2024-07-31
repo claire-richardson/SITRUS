@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import mod_input
 import mod_geo
+import shutil
 import os
 
 # define starting block parameters and output files:
@@ -163,22 +164,28 @@ np.savetxt(block_file, df_block_dim, fmt = f'%i, %i, %1.{cdp}f, %1.{cdp}f, %1.{c
 
 ## NEAR NEIGHBORS
 if mod_input.make_near_neighbors_files == True:
+    try:
+        shutil.rmtree(f'./{mod_input.near_neighbors_directory}')
+    except:
+        pass
     os.mkdir(f'./{mod_input.near_neighbors_directory}')
 
+    df_block_dim = np.array(df_block_dim)
     for b in range(len(df_block_dim)):
-        b_no = b + 1
-        print(f'working on block number {b_no} of {len(df_block_dim)}')
-        b_center_lat = df_block_dim.loc[df_block_dim['BLOCK#'] == b_no]['CENTER_LAT']
-        b_center_lon = df_block_dim.loc[df_block_dim['BLOCK#'] == b_no]['CENTER_LON']
+        b_no = int(df_block_dim[b, 0])
+        b_center_lat = df_block_dim[b, -2]
+        b_center_lon = df_block_dim[b, -1]
+    
         eligible_blocks = []
         radius_degrees = []
-
+    
         for block in range(len(df_block_dim)):
-            block_no = block + 1
-            block_center_lat = df_block_dim.loc[df_block_dim['BLOCK#'] == block_no]['CENTER_LAT']
-            block_center_lon = df_block_dim.loc[df_block_dim['BLOCK#'] == block_no]['CENTER_LON']
+            block_no = int(df_block_dim[block, 0])
+            block_center_lat = df_block_dim[block, -2]
+            block_center_lon = df_block_dim[block, -1]
+            
             distance_to_center = mod_geo.GCP_length(b_center_lat, b_center_lon, block_center_lat, block_center_lon)
-
+    
             if distance_to_center <= mod_input.max_near_neighbors_radius:
                 eligible_blocks.append(block_no)
                 radius_degrees.append(distance_to_center)

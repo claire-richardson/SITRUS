@@ -3,8 +3,8 @@
 
 
 ## Output/saved files:
-1. makes and saves individual coverage files for each phase as `phases/{phase}/phase_data/{phase}_coverage.csv`
-2. makes and saves a total coverage file for the whole dataset as `phases/total_coverage.csv`
+1. makes and saves individual coverage files for each phase as `coverage/{phase}/phase_data/{phase}_coverage.csv`
+2. makes and saves a total coverage file for the whole dataset as `coverage/total_coverage.csv` **note that this file must be manually renamed if using multiple datasets to prevent overwrite/loss of data**
 3. outputs progress to `phases/{phase}/phase_data/{phase}_pt4_coverage_log.txt`
 
 

@@ -98,6 +98,7 @@ def prem_crust_travel_time(ray_param, depth_max):
 
 # boundary finding code/function for each parallel process:
 def find_boundaries_resample(phase):
+    phase_name = phase.split('_')[0]
     ## Define functions ##
     def add_pt_info(path_len, mid_depth, p_azimuth, p_depth, p_dist, p_seg_dist, p_lat, p_lon, p_shell, p_block):
         km_dist = path_len + cumulative_lengths[-1]
@@ -142,31 +143,28 @@ def find_boundaries_resample(phase):
     except:
         pass
     try:
-        os.remove(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt3_boundary_finding_log.txt')
+        os.remove(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_pt3_boundary_finding_log.txt')
     except:
         pass
     
     start_boundary_finding_time = time.time()
     ## Start code ##
-    df_phase_data = pd.read_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_master_data.csv')
-    paths = glob.glob(f'./{mod_input.phases_directory}/{phase}/{mod_input.paths_directory}/orig_{phase}_*.csv')
+    df_phase_data = pd.read_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_master_data.csv')
+    paths = glob.glob(f'./{mod_input.phases_directory}/{phase}/{mod_input.paths_directory}/orig_{phase_name}_*.csv')
     tot_paths = len(paths)
     itr = 0
 
     # begin master loop to loop through all raypaths
     for path in paths:
         itr += 1
-        # with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt3_resample_log.txt', 'a') as fout:
-        #     fout.write(f'- working on path {itr} of {len(paths)}\n')
         try:
             df_p = pd.read_csv(path)
-            path_id = str(path).split(sep = '_')[-5]
+            path_id = int(path.split('_')[-5])
             ray_param = df_p['p'][1]
             df_p = df_p.drop(columns = ['p', 'TIME'])
             max_depth = df_p['DEPTH'].max()
-            with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt3_resample_log.txt', 'a') as fout:
+            with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_pt3_resample_log.txt', 'a') as fout:
                 fout.write(f'- working on path {itr} (path id: {path_id}) of {len(paths)}\n')
-            
 
             # first, find any boundaries.
             # initialize lists:
@@ -520,26 +518,25 @@ def find_boundaries_resample(phase):
             headers = ','.join(h)
     
             # save the dataframe:
-            np.savetxt(f'./{mod_input.phases_directory}/{phase}/{mod_input.resampled_directory}/{phase}_{path_id}_resampled_segments.csv', df_resamp, fmt = format_string, header = headers, delimiter = ',', comments = '')
+            np.savetxt(f'./{mod_input.phases_directory}/{phase}/{mod_input.resampled_directory}/{phase_name}_{path_id}_resampled_segments.csv', df_resamp, fmt = format_string, header = headers, delimiter = ',', comments = '')
             # os.remove(path)
             # print(f'Path number: {itr} of {tot_paths}; path: {path}')
     
         except:
             # print(f'Path number: {itr} of {tot_paths}; path: {path}; ***** BUG *****')
             # save the name of the path to a new file
-            with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt3_resample_bugs.txt', 'a') as fout:
+            with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_pt3_resample_bugs.txt', 'a') as fout:
                 fout.write(f'{path}\n')
 
     # do this at the very very end with the whole thing finished
     df_phase_data['CRUST_1.0_DT'] = df_phase_data['DT'] - df_phase_data['CRUST_1.0_CORR']
     df_phase_data['CRUST_1.0_ELLIP_DT'] = df_phase_data['DT'] - df_phase_data['CRUST_1.0_CORR'] - df_phase_data['ELLIP_CORR']
-    df_phase_data.to_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_master_data.csv', index = False)
+    df_phase_data.to_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_master_data.csv', index = False)
 
-    with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase}_pt3_resample_log.txt', 'a') as fout:
+    with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_pt3_resample_log.txt', 'a') as fout:
         fout.write(f'FINISHED; total time: {(time.time() - start_boundary_finding_time) / 60} minutes; {((time.time() - start_boundary_finding_time) / 60) / 60} hours\n')
 
 ## Start parallel processes:
-print(f'START FINDING BOUNDARIES AND RESAMPLING RAYPATHS')
 bound_finding_start = time.time()
 
 if __name__ == '__main__':
@@ -547,7 +544,6 @@ if __name__ == '__main__':
     process_idx = 0
     for phase in mod_input.all_phases:
         process_idx += 1
-        print(f'  - starting process {process_idx} of {len(mod_input.all_phases)}')
 
         p = mp.Process(target = find_boundaries_resample, args = (phase,))
         p.start()
@@ -557,8 +553,6 @@ if __name__ == '__main__':
         process.join()
 
 bound_finding_time = time.time() - bound_finding_start
-print(f'FINISHED FINDING BOUNDARIES AND RESAMPLING; runtime: {bound_finding_time / 60} minutes / {(bound_finding_time / 60) / 60} hours')
-
 
 
 
