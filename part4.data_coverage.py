@@ -1,11 +1,21 @@
 import os
 import glob
 import time
+import mod_track
 import mod_input
 import numpy as np
 import pandas as pd
 import mod_database
 import multiprocessing as mp
+
+pid = os.getpid()
+start_time = time.time()
+start_subj = f'Process began (PID: {pid}); part4.data_coverage.py'
+start_text = f'Process {pid} began;\nDataset: {mod_input.dataset}'
+try:
+    mod_track.SendMsg(start_subj, start_text)
+except:
+    pass
 
 df_shells = pd.read_csv(mod_input.shell_file)
 df_blocks = pd.read_csv(mod_input.block_file)
@@ -218,4 +228,9 @@ df_all = pd.DataFrame(df_all, columns = column_names)
 df_all.to_csv(f'./coverage/total_coverage.csv', index = False)
 
 
-
+end_subj = f'Process ended (PID: {pid}); part4.data_coverage.py'
+end_text = f'Process {pid} complete;\nRuntime: {mod_track.runtime(time.time() - start_time)}'
+try:
+    mod_track.SendMsg(end_subj, end_text)
+except:
+    pass
