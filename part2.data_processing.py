@@ -959,7 +959,7 @@ for line in range(len(df_all)):
     df_all[line, 3] = sector_count
 
 df_all = pd.DataFrame(df_all, columns = column_names)
-df_all.to_csv(f'./coverage/total_coverage.csv', index = False)
+df_all.to_csv(f'./coverage/total_coverage_{mod_input.dataset}', index = False)
 
 end_subj = f'Process ended (PID: {pid}); part2.data_processing.py'
 end_text = f'Process {pid} complete;\nRuntime: {mod_track.runtime(time.time() - start_time)}'

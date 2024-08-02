@@ -30,4 +30,4 @@
 
 ## Necessary compute resources:
 1. HPC cores: 1
-2. Time allocation: With near neighbors-generally a few hours, depending on block size and total number. Without near neighbors: >1 minute.
+2. Time allocation: Generally <10 minutes, although if `max_near_neighbors_radius` is very large more time may be required
