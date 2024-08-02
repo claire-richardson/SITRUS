@@ -1,10 +1,21 @@
 # import libraries and packages:
-import numpy as np
 import pandas as pd
+import numpy as np
 import mod_input
+import mod_track
 import mod_geo
 import shutil
+import time
 import os
+
+pid = os.getpid()
+start_time = time.time()
+start_subj = f'Process began (PID: {pid}); part1.grid_definition.py'
+start_text = f'Process {pid} began'
+try:
+    mod_track.SendMsg(start_subj, start_text)
+except:
+    pass
 
 # define starting block parameters and output files:
 depth_bounds = mod_input.shell_bounds
@@ -192,3 +203,10 @@ if mod_input.make_near_neighbors_files == True:
 
         df_near_neighbors = pd.DataFrame(data = {'NEIGHBOR': eligible_blocks, 'RADIUS_DEG': radius_degrees})
         np.savetxt(f'{mod_input.near_neighbors_directory}/block_{b_no}_neighbors.csv', df_near_neighbors, fmt = f'%i,%1.{cdp}f', delimiter = ',', header = 'NEIGHBOR,RADIUS_DEG', comments = '')
+
+end_subj = f'Process ended (PID: {pid}); part1.grid_definition.py'
+end_text = f'Process {pid} complete;\nRuntime: {mod_track.runtime(time.time() - start_time)}'
+try:
+    mod_track.SendMsg(end_subj, end_text)
+except:
+    pass
