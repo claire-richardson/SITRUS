@@ -478,6 +478,46 @@ df_rms.to_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_ty
 # save the interpolated file
 df_registered_model.to_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model_name}_update/{model_name}_grid_registered.csv', index = False)
 
+
+
+
+
+with open(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model_name}_update/pt3_log_model_processing.txt', 'a') as fout:
+    fout.write(f'- making the original model plot files\n')
+    
+try:
+    os.mkdir(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model_name}_update/original_model_plot_files')
+except:
+    pass
+
+lats = np.arange(mod_input.start_lat, mod_input.final_lat, mod_input.reference_lat)
+lons = np.arange(mod_input.start_lon, mod_input.final_lon, mod_input.reference_lon)
+plot_file_path = f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model_name}_update/original_model_plot_files'
+
+for shell_to_plot in all_shells:
+    og_perturbs_file = f'{plot_file_path}/{model_name}_shell_{shell_to_plot}_original_perturbs_plot_ready_{mod_input.reference_lat}deg_lat_by_{mod_input.reference_lon}deg_lon.csv'
+    df_og_shell_data = df_registered_model.loc[df_registered_model['SHELL#'] == shell_to_plot]
+    df_og = pd.DataFrame(data = {'LON': lons})
+
+    # make empty lists that will be filled with numpy arrays for each latitude band, for each model.
+    og_dvs = []
+    
+    # loop through all latitudes in the model space
+    for lat in lats:
+        # make empty lists to fill in the perturbations for the current latitude band
+        lat_og_dvs = []
+    
+        # loop through all longitudes in the model space
+        for lon in lons:
+            # find the block that the current lat/lon pair falls in
+            block = mod_database.find_block_id(lat, lon)
+            original_perturb = float(df_og_shell_data.loc[df_og_shell_data['BLOCK#'] == block][out_property_header].iloc[0])
+            lat_og_dvs.append(original_perturb)
+        
+        og_dvs.append(np.array(lat_og_dvs))
+        df_og[f'{lat}'] = lat_og_dvs
+    df_og.to_csv(og_perturbs_file, index = False)
+
 end_subj = f'Process ended (PID: {pid}); part3.model_processing.py'
 end_text = f'Process {pid} complete;\nRuntime: {mod_track.runtime(time.time() - start_time)}'
 try:
