@@ -25,7 +25,6 @@
 user_email = 'crricha5@asu.edu'
 
 # PHASE AND DATA NAMING #
-phase = 'SS'
 #['S_G', 'ScS_G', 'SS_G', 'SSS_G', 'SSSS_G', 'ScSScS_G', 'SSSSS_G', 'sS_G', 'sSS_G', 'sScSScS_G', 'sScS_G', 'sSSS_G', 'ScSScSScS_G', 'sSSSS_G', 'sScSScSScS_G']
 #['SSS_H_vs', 'S_H_vs', 'ScSScS_H_vs', 'ScSScSScSScS_H_vs', 'ScS_H_vs', 'ScSScSScS_H_vs', 'SSSSm_H_vs', 'SSm_H_vs', 'Sdiff_H_vs', 'SSSm_H_vs', 'SSSSS_H_vs', 'ScSScSScSScSScSm_H_vs', 'SSSS_H_vs', 'SS_H_vs', 'SSSSSm_H_vs', 'ScSScSScSm_H_vs', 'ScSScSScSScSScS_H_vs', 'SSSSSSm_H_vs', 'ScSScSScSScSm_H_vs']
 #['SSSm_H_mb', 'ScSScSScS_H_mb', 'ScSScSScSScS_H_mb', 'SSSSm_H_mb', 'SSSSSm_H_mb', 'ScSScSScSScSScS_H_mb', 'SSSSSSm_H_mb', 'ScSScSScSScSm_H_mb']
@@ -72,7 +71,8 @@ azimuthal_sectors = 6
 
 
 # MODEL PREPROCESSING
-all_models_to_process = ['GLAD-M25_vsh', 'S40RTS_vsh', 'Savani_vsh', 'SEMUCB-WM1_vsh', 'SGLOBE-rani_vsh']
+convert_nc_to_csv = False
+zero_shells = [1]
 
 
 ## INPUT MODEL PARAMETERES #
