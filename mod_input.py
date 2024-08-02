@@ -21,6 +21,9 @@
 # MODIFIABLE VARIABLES #
 ########################
 
+# PROGRESS TRACKING # 
+user_email = 'crricha5@asu.edu'
+
 # PHASE AND DATA NAMING #
 phase = 'SS'
 all_phases = ['S_G', 'ScS_G', 'SS_G', 'SSS_G', 'SSSS_G', 'ScSScS_G', 'SSSSS_G', 'sS_G', 'sSS_G', 'sScSScS_G', 'sScS_G', 'sSSS_G', 'ScSScSScS_G', 'sSSSS_G', 'sScSScSScS_G']
