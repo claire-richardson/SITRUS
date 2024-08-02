@@ -183,7 +183,7 @@ def make_raypaths(phase):
     df_data.to_csv(f'./{phases_directory}/{phase}/{data_directory}/{phase_name}_master_data.csv', index = False)
     
     with open(f'./{phases_directory}/{phase}/{data_directory}/{phase_name}_pt2_log_make_raypaths.txt', 'a') as fout:
-        fout.write(f'FINISHED; runtime:    {mod_track.runtime(time.time() - start_raypaths)}')
+        fout.write(f'FINISHED; runtime: {mod_track.runtime(time.time() - start_raypaths)}\n')
 
 ## MAKE RAYPATHS:
 if __name__ == '__main__':
@@ -729,7 +729,7 @@ def find_boundaries_resample(phase):
     df_phase_data.to_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_master_data.csv', index = False)
 
     with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_pt2_log_boundary_finding.txt', 'a') as fout:
-        fout.write(f'FINISHED; total time:    {mod_track.runtime(time.time() - start_boundary_finding_time)}')
+        fout.write(f'FINISHED; total time: {mod_track.runtime(time.time() - start_boundary_finding_time)}\n')
 
 ## Start parallel processes:
 if __name__ == '__main__':
@@ -912,7 +912,7 @@ def find_phase_coverage(phase):
         df_phase_sectors_grid.to_csv(avg_phase_sectors_file, index = False)
     
     with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_pt2_log_coverage.txt', 'a') as fout:
-        fout.write(f'FINISHED; total time:    {mod_track.runtime(time.time() - start_coverage_time)}')
+        fout.write(f'FINISHED; total time: {mod_track.runtime(time.time() - start_coverage_time)}\n')
 
 ## Start parallel processes:
 coverage_start = time.time()
@@ -935,7 +935,7 @@ if __name__ == '__main__':
 
     coverage_time = time.time() - coverage_start
     with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_pt2_log_coverage.txt', 'a') as fout:
-        fout.write(f'FINISHED PARSING INDIVIDUAL PHASE COVERAGE; runtime:    {mod_track.runtime(coverage_time)}')
+        fout.write(f'FINISHED PARSING INDIVIDUAL PHASE COVERAGE; runtime: {mod_track.runtime(coverage_time)}\n')
 
 # loop through each newly made individual coverage file to compile the sums into the master/total coverage file.
 for phase in mod_input.all_phases:
@@ -962,7 +962,7 @@ df_all = pd.DataFrame(df_all, columns = column_names)
 df_all.to_csv(f'./coverage/total_coverage.csv', index = False)
 
 end_subj = f'Process ended (PID: {pid}); part2.data_processing.py'
-end_text = f'Process {pid} complete;\nRuntime:    {mod_track.runtime(time.time() - start_time)}'
+end_text = f'Process {pid} complete;\nRuntime: {mod_track.runtime(time.time() - start_time)}'
 try:
     mod_track.SendMsg(end_subj, end_text)
 except:
