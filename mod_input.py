@@ -26,17 +26,17 @@ user_email = 'crricha5@asu.edu'
 
 # PHASE AND DATA NAMING #
 phase = 'SS'
-all_phases = ['S_G', 'ScS_G', 'SS_G', 'SSS_G', 'SSSS_G', 'ScSScS_G', 'SSSSS_G', 'sS_G', 'sSS_G', 'sScSScS_G', 'sScS_G', 'sSSS_G', 'ScSScSScS_G', 'sSSSS_G', 'sScSScSScS_G']
+#['S_G', 'ScS_G', 'SS_G', 'SSS_G', 'SSSS_G', 'ScSScS_G', 'SSSSS_G', 'sS_G', 'sSS_G', 'sScSScS_G', 'sScS_G', 'sSSS_G', 'ScSScSScS_G', 'sSSSS_G', 'sScSScSScS_G']
 #['SSS_H_vs', 'S_H_vs', 'ScSScS_H_vs', 'ScSScSScSScS_H_vs', 'ScS_H_vs', 'ScSScSScS_H_vs', 'SSSSm_H_vs', 'SSm_H_vs', 'Sdiff_H_vs', 'SSSm_H_vs', 'SSSSS_H_vs', 'ScSScSScSScSScSm_H_vs', 'SSSS_H_vs', 'SS_H_vs', 'SSSSSm_H_vs', 'ScSScSScSm_H_vs', 'ScSScSScSScSScS_H_vs', 'SSSSSSm_H_vs', 'ScSScSScSScSm_H_vs']
 #['SSSm_H_mb', 'ScSScSScS_H_mb', 'ScSScSScSScS_H_mb', 'SSSSm_H_mb', 'SSSSSm_H_mb', 'ScSScSScSScSScS_H_mb', 'SSSSSSm_H_mb', 'ScSScSScSScSm_H_mb']
 #['ScSScS_H', 'ScS_H', 'Sdiff_H', 'SS_H', 'S_H', 'SSS_H']
-#['S_R', 'SS_R', 'SSS_R', 'SSSm_R', 'ScSScS_R', 'ScSScSScS_R', 'ScS_R', 'SSm_R', 'SSSSm_R', 'sSS_R', 'sScSScS_R', 'sS_R', 'sSSSSm_R', 'sSSSm_R', 'sScSScSScS_R', 'sScS_R', 'sSSS_R', 'sSSm_R']
+all_phases = ['S_R', 'SS_R', 'SSS_R', 'SSSm_R', 'ScSScS_R', 'ScSScSScS_R', 'ScS_R', 'SSm_R', 'SSSSm_R', 'sSS_R', 'sScSScS_R', 'sS_R', 'sSSSSm_R', 'sSSSm_R', 'sScSScSScS_R', 'sScS_R', 'sSSS_R', 'sSSm_R']
 #['S_G', 'ScS_G', 'SS_G', 'SSS_G', 'SSSS_G', 'ScSScS_G', 'SSSSS_G', 'sS_G', 'sSS_G', 'sScSScS_G', 'sScS_G', 'sSSS_G', 'ScSScSScS_G', 'sSSSS_G', 'sScSScSScS_G']
 
 
 # INPUT DATA FILES #
-dataset = 'grand_data_SH_nodupes_notrip_PREM.csv'
-raw_headers_to_keep = ['EQ_DATE', 'COMPREHENSIVE_WEIGHT', 'HIPR_BIN', 'HIPR_STA_WEIGHT', 'HIPR_EQ_WEIGHT']
+dataset = 'data_ritsema_clean.csv'
+raw_headers_to_keep = ['EQ_DATE', 'STA_NAME', 'COMPREHENSIVE_WEIGHT', 'HIPR_BIN', 'HIPR_STA_WEIGHT', 'HIPR_EQ_WEIGHT']
 #['EQ_DATE', 'STNM', 'STA_ELV', 'COMPREHENSIVE_WEIGHT', 'HIPR_BIN', 'HIPR_STA_WEIGHT', 'HIPR_EQ_WEIGHT']
 #['EQ_DATE', 'STNM', 'COMPREHENSIVE_WEIGHT', 'HIPR_BIN', 'HIPR_STA_WEIGHT', 'HIPR_EQ_WEIGHT']
 data_wave_type = 'S' # either 'S' or 'P'
