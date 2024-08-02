@@ -3,6 +3,7 @@ import time
 import mod_geo
 import fnmatch
 import mod_input
+import mod_track
 import mod_database
 import numpy as np
 import pandas as pd
@@ -11,6 +12,15 @@ import multiprocessing as mp
 from obspy.taup import taup_geo
 from obspy.taup import TauPyModel
 from ellipticipy import ellipticity_correction
+
+pid = os.getpid()
+start_time = time.time()
+start_subj = f'Process began (PID: {pid}; part2.parse_data_make_raypaths.py'
+start_text = f'Process {pid} began;\nDataset: {mod_input.dataset}'
+try:
+    mod_track.SendMsg(start_subj, start_text)
+except:
+    pass
 
 phases_directory = mod_input.phases_directory
 data_directory = mod_input.data_directory
@@ -186,3 +196,12 @@ if __name__ == '__main__':
 
     for process in process_list:
         process.join()
+
+end_subj = f'Process ended (PID: {pid}; part2.parse_data_make_raypaths.py'
+end_text = f'Process {pid} complete;\nRuntime: {mod_track.runtime(time.time() - start_time)}'
+try:
+    mod_track.SendMsg(end_subj, end_text)
+except:
+    pass
+
+
