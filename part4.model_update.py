@@ -696,7 +696,9 @@ for layer_bottom_shell in mod_input.layer_base_shells:
     
     layers_complete += 1
     with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
+        fout.write(f'\n-----\n')
         fout.write(f'-----   STARTING UPDATE FOR LAYER {layers_complete} of {len(mod_input.layer_base_shells)}, DEPTH RANGE: {layer_depth_min} km - {layer_stripping_depth} km   -----\n')
+        fout.write(f'-----\n')
     
     # write to model update log
     if os.path.exists(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model}_update/model_update_log_{model}.csv'):
@@ -878,7 +880,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
         rm_mean_time = time.time() - rm_mean_start
     
         with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-            fout.write(f'- Finished removing mean; runtime: {round(rm_mean_time / 60, 1)} minutes / {round((rm_mean_time / 60) / 60, 1)} hours\n')
+            fout.write(f'- Finished removing mean; runtime: {mod_track.runtime(rm_mean_time)}\n')
 
     ############################################
     # START WHILE LOOP FOR CURRENT MODEL LAYER #
@@ -933,8 +935,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
         backmapping_time = time.time() - backmapping_start
 
         with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-            fout.write(f'- Finished backmapping and converting from path-to-block format; runtime: {round(backmapping_time / 60, 1)} minutes / {round((backmapping_time / 60) / 60, 1)} hours\n')
-
+            fout.write(f'- Finished backmapping and converting from path-to-block format; runtime: {mod_track.runtime(backmapping_time)} hours\n')
         
         ## Merge all files for the different processes into the main block files:
         with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
@@ -954,7 +955,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
 
         merge_time = time.time() - merge_start
         with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-            fout.write(f'- Finished merging temporary block files into main block files; runtime: {round(merge_time, 1)} seconds / {round(merge_time / 60, 1)} minutes\n')
+            fout.write(f'- Finished merging temporary block files into main block files; runtime: {mod_track.runtime(merge_time)}\n')
         
         
         #### NOW, ALL OF THE BACKMAPPED PATHS ARE SAVED ####
@@ -1001,13 +1002,13 @@ for layer_bottom_shell in mod_input.layer_base_shells:
 
         if continue_layer_iterating == False:
             with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                fout.write(f'- Finished computing variance: {round(residual_time, 1)} seconds; threshold reached and layer update ended\n')
+                fout.write(f'- Finished computing variance; threshold reached and layer update ended\n')
             shutil.rmtree(iteration_directory_path)
             
         elif continue_layer_iterating == True:
             residual_time = time.time() - residual_start
             with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                fout.write(f'- Finished computing variance: {round(residual_time, 1)} seconds; threshold not yet reached\n')
+                fout.write(f'- Finished computing variance; threshold not yet reached\n')
             
             with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
                 fout.write(f'- * backmapping COMPLETE for all phases\n')
@@ -1041,7 +1042,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
                 smoothing_radii_time = time.time() - smoothing_radii_start
     
                 with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                    fout.write(f'- Finished finding smoothing radii; runtime: {round(smoothing_radii_time / 60, 1)} minutes / {round((smoothing_radii_time / 60) / 60, 1)} hours\n')
+                    fout.write(f'- Finished finding smoothing radii; runtime: {mod_track.runtime(smoothing_radii_time)}\n')
     
             else:
                 with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
@@ -1060,8 +1061,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
     
                 smoothing_radii_time = time.time() - smoothing_radii_start
                 with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                    fout.write(f'- Finished updating smoothing blocks; runtime: {round(smoothing_radii_time / 60, 1)} minutes / {round((smoothing_radii_time / 60) / 60, 1)} hours\n')
-            
+                    fout.write(f'- Finished updating smoothing blocks; runtime: {mod_track.runtime(smoothing_radii_time)}\n')            
         
             # now, go directly to smoothing. loop through each block in each shell and grab the information in the shell_{shell}/block_{block} file.
             with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
@@ -1084,7 +1084,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
     
             smoothing_time = time.time() - smoothing_start
             with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                fout.write(f'- Finished model smoothing; runtime: {round(smoothing_time, 1)} seconds / {round(smoothing_time / 60, 1)} minutes\n')
+                fout.write(f'- Finished model smoothing; runtime: {mod_track.runtime(smoothing_time)}\n')
     
             
             df_model = df_model.drop(df_model.index)
@@ -1187,18 +1187,15 @@ for layer_bottom_shell in mod_input.layer_base_shells:
             iteration_time = time.time() - iteration_start
 
             with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-                fout.write(f'total time for iteration: {round(iteration_time / 60, 1)} minutes / {round(iteration_time / 60 / 60, 1)} hours\n')
-                fout.write(f'total time for backmapping & converting from path to block format: {round(backmapping_time / 60, 1)} minutes / {round((backmapping_time / 60) / 60, 1)} hours\n')
-                fout.write(f'total time for merging all temporary block information into main block files: {round(merge_time / 60, 1)} minutes\n')
-                fout.write(f'total time for compiling all unexplained differences and computing variance: {round(residual_time / 60, 1)} minutes\n')
-                fout.write(f'total time for finding smoothing radii, Gaussian weights, and saving smoothing files OR updating smoothing files: {round(smoothing_radii_time / 60, 1)} minutes / {round((smoothing_radii_time / 60) / 60, 1)} hours\n')
-                fout.write(f'total time for smoothing: {round(smoothing_time / 60, 1)} minutes\n')
-                fout.write(f'mean time for backmapping per path (total paths: {tot_paths}): {round(backmapping_time / tot_paths, 1)} seconds\n')
-                fout.write(f'mean time for smoothing per shell: {round(smoothing_time / len(shells_to_update), 1)} seconds\n')
-                fout.write(f'mean time for smoothing per block: {round((smoothing_time / len(shells_to_update)) / len(all_blocks), 1)} seconds\n')
-                # fout.write(f'mean misfit (dataset residual - predicted residual): {unexplained_means[-1]} seconds \n')
-                # fout.write(f'misfit standard deviation: {unexplained_stds[-1]}\n')
-                # fout.write(f'misfit variance: {unexplained_vars[-1]}\n\n\n\n')
+                fout.write(f'total time for iteration: {mod_track.runtime(iteration_time)}\n')
+                fout.write(f'total time for backmapping & converting from path to block format: {mod_track.runtime(backmapping_time)}\n')
+                fout.write(f'total time for merging all temporary block information into main block files: {mod_track.runtime(merge_time)}\n')
+                fout.write(f'total time for compiling all unexplained differences and computing variance: {mod_track.runtime(residual_time)}\n')
+                fout.write(f'total time for finding smoothing radii, Gaussian weights, and saving smoothing files OR updating smoothing files: {mod_track.runtime(smoothing_radii_time)}\n')
+                fout.write(f'total time for smoothing: {mod_track.runtime(smoothing_time)}\n')
+                fout.write(f'mean time for backmapping per path (total paths: {tot_paths}): {mod_track.runtime(backmapping_time / tot_paths)}\n')
+                fout.write(f'mean time for smoothing per shell: {mod_track.runtime(smoothing_time / len(shells_to_update))}\n')
+                fout.write(f'mean time for smoothing per block: {mod_track.runtime((smoothing_time / len(shells_to_update)) / len(all_blocks))}\n')
             
         for phase in phases_to_update:
             shutil.rmtree(f'./{mod_input.phases_directory}/{phase}/{mod_input.backmapped_paths_directory}_{job_id}')
