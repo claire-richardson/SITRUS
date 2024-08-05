@@ -76,7 +76,7 @@ zero_shells = [1]
 
 
 ## INPUT MODEL PARAMETERES #
-input_model = 'S40RTS_vsh' # name of input model file
+input_model = 'S40RTS_dvs' # name of input model file
 delimiter = ',' # delimiter in converted model.csv file
 lat_header = 'latitude' # header in converted model.csv file
 lon_header = 'longitude' # header in converted model.csv file
@@ -87,11 +87,11 @@ convert_vel_to_perturb = True
 
 
 ## MODEL UPDATE PARAMETERS
-dataset_description = ['Grand+Ritsema+Hongyux3 (all)', 'Grand+Ritsema+Hongyux3 (all)'] # DONT USE COMMAS!
-update_phases = [['ScSScS_H', 'ScS_H', 'Sdiff_H', 'SS_H', 'S_H', 'SSS_H', 'SSSm_H_mb', 'ScSScSScS_H_mb', 'ScSScSScSScS_H_mb', 'SSSSm_H_mb', 'SSSSSm_H_mb', 'ScSScSScSScSScS_H_mb', 'SSSSSSm_H_mb', 'ScSScSScSScSm_H_mb', 'SSS_H_vs', 'S_H_vs', 'ScSScS_H_vs', 'ScSScSScSScS_H_vs', 'ScS_H_vs', 'ScSScSScS_H_vs', 'SSSSm_H_vs', 'SSm_H_vs', 'Sdiff_H_vs', 'SSSm_H_vs', 'SSSSS_H_vs', 'ScSScSScSScSScSm_H_vs', 'SSSS_H_vs', 'SS_H_vs', 'SSSSSm_H_vs', 'ScSScSScSm_H_vs', 'ScSScSScSScSScS_H_vs', 'SSSSSSm_H_vs', 'ScSScSScSScSm_H_vs', 'S_R', 'SS_R', 'SSS_R', 'SSSm_R', 'ScSScS_R', 'ScSScSScS_R', 'ScS_R', 'SSm_R', 'SSSSm_R', 'sSS_R', 'sScSScS_R', 'sS_R', 'sSSSSm_R', 'sSSSm_R', 'sScSScSScS_R', 'sScS_R', 'sSSS_R', 'sSSm_R', 'S_G', 'ScS_G', 'SS_G', 'SSS_G', 'SSSS_G', 'ScSScS_G', 'SSSSS_G', 'sS_G', 'sSS_G', 'sScSScS_G', 'sScS_G', 'sSSS_G', 'ScSScSScS_G', 'sSSSS_G', 'sScSScSScS_G'], ['ScSScS_H', 'ScS_H', 'Sdiff_H', 'SS_H', 'S_H', 'SSS_H', 'SSSm_H_mb', 'ScSScSScS_H_mb', 'ScSScSScSScS_H_mb', 'SSSSm_H_mb', 'SSSSSm_H_mb', 'ScSScSScSScSScS_H_mb', 'SSSSSSm_H_mb', 'ScSScSScSScSm_H_mb', 'SSS_H_vs', 'S_H_vs', 'ScSScS_H_vs', 'ScSScSScSScS_H_vs', 'ScS_H_vs', 'ScSScSScS_H_vs', 'SSSSm_H_vs', 'SSm_H_vs', 'Sdiff_H_vs', 'SSSm_H_vs', 'SSSSS_H_vs', 'ScSScSScSScSScSm_H_vs', 'SSSS_H_vs', 'SS_H_vs', 'SSSSSm_H_vs', 'ScSScSScSm_H_vs', 'ScSScSScSScSScS_H_vs', 'SSSSSSm_H_vs', 'ScSScSScSScSm_H_vs', 'S_R', 'SS_R', 'SSS_R', 'SSSm_R', 'ScSScS_R', 'ScSScSScS_R', 'ScS_R', 'SSm_R', 'SSSSm_R', 'sSS_R', 'sScSScS_R', 'sS_R', 'sSSSSm_R', 'sSSSm_R', 'sScSScSScS_R', 'sScS_R', 'sSSS_R', 'sSSm_R', 'S_G', 'ScS_G', 'SS_G', 'SSS_G', 'SSSS_G', 'ScSScS_G', 'SSSSS_G', 'sS_G', 'sSS_G', 'sScSScS_G', 'sScS_G', 'sSSS_G', 'ScSScSScS_G', 'sSSSS_G', 'sScSScSScS_G']] # list of lists of phases to include in the model update. include name modifier. the number and order of lists must match the number and order of layers.
-type_of_phase_subselection = ['proportion', 'proportion'] #['proportion'] # 'proportion' or 'number'
-subselection_of_phase_data_to_use = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
-residual_header = ['CRUST_ELLIP_DT', 'CRUST_ELLIP_DT'] # column name of the residual that you want to use in the data file.
+dataset_description = ['Graycloud test', 'Graycloud test'] # DONT USE COMMAS!
+update_phases = [['S_G', 'ScS_G', 'SS_G', 'SSS_G', 'SSSS_G', 'ScSScS_G', 'SSSSS_G', 'sS_G', 'sSS_G', 'sScSScS_G', 'sScS_G', 'sSSS_G', 'ScSScSScS_G', 'sSSSS_G', 'sScSScSScS_G'], ['S_G', 'ScS_G', 'SS_G', 'SSS_G', 'SSSS_G', 'ScSScS_G', 'SSSSS_G', 'sS_G', 'sSS_G', 'sScSScS_G', 'sScS_G', 'sSSS_G', 'ScSScSScS_G', 'sSSSS_G', 'sScSScSScS_G']] # list of lists of phases to include in the model update. include name modifier. the number and order of lists must match the number and order of layers.
+type_of_phase_subselection = ['number', 'number'] #['proportion'] # 'proportion' or 'number'
+subselection_of_phase_data_to_use = [[10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10], [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]]
+residual_header = ['DT', 'DT'] # column name of the residual that you want to use in the data file.
 residual_limits = [[True, -20., 20.], [True, -20., 20.]] #[[False]] or [[True, lower_lim, upper_lim]] argument for whether or not there are limits imposed on residual values. # list of lists should be the same length as the number of layers
 layer_top_shells = [2, 2] # list of the top-most shell(s) in a given layer(s)
 layer_base_shells = [31, 31] # list of the bottom-most shell(s) in a given layer(s)
@@ -100,7 +100,7 @@ remove_residual_mean = [True, True]
 starting_RMS_model_to_use = input_model
 iteration_to_stop_RMS_weighting = [2, 2] # the iteration for each layer of `n` layers on which to stop weighting backmapped perturbations by RMS weighting. a list with `n` elements, either integers or 'None'.
 cutoff_type = ['total iterations', 'total iterations'] # 'reduction' or 'total iterations'
-cutoff = [5, 5] # if 'reduction', type == float; if 'total iterations', type == int
+cutoff = [2, 2] # if 'reduction', type == float; if 'total iterations', type == int
 HPC_cores = 31
 
 
