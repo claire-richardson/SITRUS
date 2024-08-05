@@ -14,7 +14,7 @@
 
 ## Before running:
 1. check if your model file includes model values given as velocities (km / s) rather than perturbations. if there are no velocity values, or the perturbations are relative to a reference model that is not PREM, the model cannot be used.
-2. upload a `{model}.nc` file to the appropriate `models/{wave_type}` directory, depending on type of waves the model uses.
+2. upload a `{model}.nc` file to the `./models/` directory. note that these files are not automatically deleted after `part3` is executed because they may contain values for multiple properties. `part3` will need to be run as many times as necessary to register all desired model values to the grid. `.nc` files for tomography models can be large, and the user may wish to remove these manually after they have been converted.
 3. if desired, rename your file to a name you would like to use later for the `input_model` variable in `mod_input`.
 4. find the headers of the model file to determine relevant variables in `mod_input` (see below). if converting from an `.nc` file, the following commands can be used to access the headers from an interactive Python shell:
     1. `>>> import netCDF4`

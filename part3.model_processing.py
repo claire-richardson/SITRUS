@@ -39,7 +39,7 @@ if mod_input.convert_nc_to_csv == True:
     else:
         # make the .csv
         os.mkdir(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/')
-        cd(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}')
+        cd(f'./{mod_input.tomography_model_directory}')
         
         SCRIPT = os.path.basename(sys.argv[0])
         VERSION = 'V.2020.273'
@@ -282,8 +282,8 @@ if mod_input.convert_nc_to_csv == True:
                 fp.close()
         make_model_geocsv()
     
-        cd('../../')
-        shutil.move(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{input_csv}', f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/{input_csv}')
+        cd('../')
+        shutil.move(f'./{mod_input.tomography_model_directory}/{input_csv}', f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/{input_csv}')
     
         # now that the model is converted, remove all of the comments at the beginning of the file
         df_model = pd.read_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{mod_input.input_model}_update/{input_csv}', sep = '|', comment = '#')
