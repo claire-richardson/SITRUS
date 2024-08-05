@@ -16,6 +16,9 @@
 1. check if your model file includes model values given as velocities (km / s) rather than perturbations. if there are no velocity values, or the perturbations are relative to a reference model that is not PREM, the model cannot be used.
 2. upload a `{model}.nc` file to the appropriate `models/{wave_type}` directory, depending on type of waves the model uses.
 3. if desired, rename your file to a name you would like to use later for the `input_model` variable in `mod_input`.
+4. find the headers of the model file. if converting from an `.nc` file, the following commands can be used to access the headers from an interactive Python shell:
+    1. `>>> import netCDF4`
+    2. `>>> netCDF4.Dataset(f'./models/S/{model}.nc').variables.keys()`
 
 
 ## Input variables to define in `mod_input.py`: 
