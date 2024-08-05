@@ -28,6 +28,11 @@ except:
 def cd(path):
     os.chdir(os.path.expanduser(path))
 
+try:
+    os.mkdir(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}')
+except:
+    pass
+
 if mod_input.convert_nc_to_csv == True:
     
     models_name = mod_input.tomography_model_directory
