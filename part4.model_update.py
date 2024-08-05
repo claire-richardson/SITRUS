@@ -935,7 +935,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
         backmapping_time = time.time() - backmapping_start
 
         with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
-            fout.write(f'- Finished backmapping and converting from path-to-block format; runtime: {mod_track.runtime(backmapping_time)} hours\n')
+            fout.write(f'- Finished backmapping and converting from path-to-block format; runtime: {mod_track.runtime(backmapping_time)}\n')
         
         ## Merge all files for the different processes into the main block files:
         with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
