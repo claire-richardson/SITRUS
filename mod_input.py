@@ -110,7 +110,6 @@ total_required_paths = [0, 20] # this is the minimum number of paths that are re
 total_required_azimuths = [0, 2] # this is the minimum number of azimuths that are required in each azimuthal sector for smoothing
 gaussian_cutoff_weight = [0.5, 0.5] # Value of the Gaussian at the smoothing cuttoff
 azimuthal_weighting = [True, False] # True or False to include azimuthal weighting when computing the smoothed azimuthal pertubation mean.
-path_length_weighting = [False, False]
 special_weights = [['COMPREHENSIVE_WEIGHT', 'HIPR_STA_WEIGHT', 'HIPR_EQ_WEIGHT'], ['COMPREHENSIVE_WEIGHT', 'HIPR_STA_WEIGHT', 'HIPR_EQ_WEIGHT']]
 
 
