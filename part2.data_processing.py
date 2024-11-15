@@ -54,8 +54,6 @@ for p in all_phases:
         os.mkdir(f'./{phases_directory}/{p}')
         os.mkdir(f'./{phases_directory}/{p}/{data_directory}')
         os.mkdir(f'./{phases_directory}/{p}/{paths_directory}')
-        # os.mkdir(f'./{phases_directory}/{p}/{orig_paths_directory}')
-        # os.mkdir(f'./{phases_directory}/{p}/{resampled_paths_directory}')
         df_specific_phase = df_data[headers].copy()
         df_specific_phase = df_specific_phase.loc[df_specific_phase['PHASE'] == phase_name]
         df_specific_phase['DIST'] = 0.
