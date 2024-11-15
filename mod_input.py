@@ -118,7 +118,7 @@ resampled_directory = 'resampled_path_files'
 tomography_model_directory = 'models'
 near_neighbors_directory = 'near_neighbors'
 block_centric_directory = 'model_block_information'
-main_headers = ['PHASE', 'EQ_LAT', 'EQ_LON', 'STA_LAT', 'STA_LON', 'EQ_DEP', 'DT']
+main_headers = ['EQ_DATE', 'PHASE', 'EQ_LAT', 'EQ_LON', 'STA_LAT', 'STA_LON', 'EQ_DEP', 'DT']
 cardinal_azimuths = [0., 90., 180., 270., 360.] # degrees
 
 # rounding values
