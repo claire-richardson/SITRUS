@@ -1,7 +1,7 @@
 ## Purpose of script:
 `part3.model_processing` performs two main tasks:
 1. converts netCDF formatted files to CSV files. This utility is not strictly necessary for the SITRUS workflow if the input tomography model files are already in .csv format (indicated by `mod_input.convert_nc_to_csv`. **IMPORTANT: model values _must_ be given as velocities or percent perturbations relative to PREM. percent perturbations relative to a different reference model are not supported**
-2. registers the input model to the 3D mesh made in `part1` by taking the average of the original values closest to each 3D block node. If indicated in `mod_input` (i.e., for the common case that model values are given in absolute velocity), it converts the velocity values in the input model to percent perturbation relative to PREM. It computes a radial RMS profile for the perturbation values in each depth shell. Finally, it makes plottable files of the model.
+2. registers the input model to the 3D mesh made in `part1` by taking the average of the original values closest to each 3D block node. If indicated in `mod_input` (i.e., for the common case that model values are given in absolute velocity), it converts the velocity values in the input model to percent perturbation relative to PREM. It computes a radial RMS profile for the perturbation values in each depth shell.
 
 
 ## Output/saved files:
@@ -9,7 +9,6 @@
 2. converts the `{model}.nc` file to `{model}.csv` file, stored in `models/{data_wave_type}/{model}_update/{model}.csv`
 3. `models/{data_wave_type}/{model}_update/{model}_grid_registered.csv`: the newly interpolated model, ready to be used for the model update.
 4. `models/{data_wave_type}/{model}_update/{model}_RMS_{perturb}.csv`: the RMS(perturb) profile of the model.
-5. `models/{data_wave_type}/{model}_update/original_model_plot_files/{model}_shell_{shell}_*.csv`: files that can be plotted with Cartopy in the included jupyter notebook.
 
 
 ## Before running:
