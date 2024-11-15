@@ -92,7 +92,10 @@ def remove_mean(lists_of_paths, list_idx):
     for list_of_paths in lists_of_paths:
         phase = str(list_of_paths[0].split('/')[2])
         phase_name = str(phase.split('_')[0])
-        dataset = '_'.join(phase.split('_')[1:])
+        if '_' in phase_name:        
+            dataset = '_'.join(phase.split('_')[1:])
+        else:
+            dataset = 'main'
         df_data = pd.read_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_master_data.csv')
         df_data = df_data[['EQ_DATE', 'EQ_LAT', 'EQ_LON', 'PATH_ID', 'PHASE', layer_residual_header]].copy()
         df_data['PHASE'] = phase_name
