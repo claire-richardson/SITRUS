@@ -1,6 +1,7 @@
 import os
 import time
 import glob
+import shuitl
 import mod_geo
 import fnmatch
 import mod_input
@@ -714,7 +715,6 @@ def find_boundaries_resample(phase):
     
             # save the dataframe:
             np.savetxt(f'./{mod_input.phases_directory}/{phase}/{mod_input.resampled_directory}/{phase_name}_{path_id}_resampled_segments.csv', df_resamp, fmt = format_string, header = headers, delimiter = ',', comments = '')
-            # os.remove(path)
             # print(f'Path number: {itr} of {tot_paths}; path: {path}')
     
         except:
@@ -722,11 +722,15 @@ def find_boundaries_resample(phase):
             # save the name of the path to a new file
             with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_pt2_bugs_boundary_finding.txt', 'a') as fout:
                 fout.write(f'{path}\n')
+        
+        # now that the path has been resampled, remove the original taup path file:
+        os.remove(path)
 
     # do this at the very very end with the whole thing finished
     df_phase_data['CRUST_1.0_DT'] = df_phase_data['DT'] - df_phase_data['CRUST_1.0_CORR']
     df_phase_data['CRUST_1.0_ELLIP_DT'] = df_phase_data['DT'] - df_phase_data['CRUST_1.0_CORR'] - df_phase_data['ELLIP_CORR']
     df_phase_data.to_csv(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_master_data.csv', index = False)
+    shutil.rmtree(f'./{mod_input.phases_directory}/{phase}/{mod_input.paths_directory}')
 
     with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_pt2_log_boundary_finding.txt', 'a') as fout:
         fout.write(f'FINISHED; total time: {mod_track.runtime(time.time() - start_boundary_finding_time)}\n')
@@ -868,48 +872,6 @@ def find_phase_coverage(phase):
     
     df_phase = pd.DataFrame(df_phase, columns = column_names)
     df_phase.to_csv(f'./coverage/{phase}_coverage.csv', index = False)
-
-    lats = np.arange(mod_input.start_lat, mod_input.final_lat, mod_input.reference_lat)
-    lons = np.arange(mod_input.start_lon, mod_input.final_lon, mod_input.reference_lon)
-    try:
-        os.mkdir(f'./coverage/{phase}_plot_files')
-    except:
-        pass
-        
-    for shell_to_plot in all_shells:
-        avg_phase_paths_file = f'./coverage/{phase}_plot_files/gridded_paths_shell_{shell_to_plot}_{mod_input.reference_lat}deg_lat_by_{mod_input.reference_lon}deg_lon.csv'
-        avg_phase_sectors_file = f'./coverage/{phase}_plot_files/gridded_sectors_shell_{shell_to_plot}_{mod_input.reference_lat}deg_lat_by_{mod_input.reference_lon}deg_lon.csv'
-    
-        df_phase_shell = df_phase.loc[df_phase['SHELL#'] == shell_to_plot].copy()
-    
-        top_depth = mod_database.get_shell_info(shell_to_plot)[1]
-        bottom_depth = mod_database.get_shell_info(shell_to_plot)[3]
-    
-        df_phase_paths_grid = pd.DataFrame(data = {'LON': lons})
-        df_phase_sectors_grid = pd.DataFrame(data = {'LON': lons})
-        
-        # loop through all latitudes in the model space
-        for lat in lats:
-            # make empty lists to fill in the values for the current latitude band
-            lat_phase_paths = []
-            lat_phase_sectors = []
-        
-            # loop through all longitudes in the model space
-            for lon in lons:
-                # find the block that the current lat/lon pair falls in
-                block = mod_database.find_block_id(lat, lon)
-    
-                phase_paths = int(df_phase_shell.loc[df_phase_shell['BLOCK#'] == block]['TOTAL_PATHS'])
-                phase_sectors = int(df_phase_shell.loc[df_phase_shell['BLOCK#'] == block]['TOTAL_SECTORS'])
-                
-                lat_phase_paths.append(phase_paths)
-                lat_phase_sectors.append(phase_sectors)
-                
-            df_phase_paths_grid[f'{lat}'] = lat_phase_paths
-            df_phase_sectors_grid[f'{lat}'] = lat_phase_sectors
-    
-        df_phase_paths_grid.to_csv(avg_phase_paths_file, index = False)
-        df_phase_sectors_grid.to_csv(avg_phase_sectors_file, index = False)
     
     with open(f'./{mod_input.phases_directory}/{phase}/{mod_input.data_directory}/{phase_name}_pt2_log_coverage.txt', 'a') as fout:
         fout.write(f'FINISHED; total time: {mod_track.runtime(time.time() - start_coverage_time)}\n')

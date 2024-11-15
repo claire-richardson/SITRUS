@@ -109,12 +109,10 @@ def GCP_length(lat1, lon1, lat2, lon2):
     - epicentral distance: epicentral distance between points 1 & 2 [format: float; unit: degrees]
     ======
     '''
-    lon1 += 180.
-    lon2 += 180.
     lat1_rad = math.radians(lat1)
-    lon1_rad = math.radians(lon1)
+    lon1_rad = math.radians(lon1 + 180.)
     lat2_rad = math.radians(lat2)
-    lon2_rad = math.radians(lon2)
+    lon2_rad = math.radians(lon2 + 180.)
     a = (math.sin((lat2_rad - lat1_rad) / 2) ** 2) + math.cos(lat1_rad) * math.cos(lat2_rad) * (math.sin((lon2_rad - lon1_rad) / 2) ** 2)
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return round(math.degrees(c), cdp)

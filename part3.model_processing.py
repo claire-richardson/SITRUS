@@ -392,17 +392,29 @@ def interpolate_model(shell_no):
         block_lat_mid = df_registered_shell[line, 3]
         block_lon_mid = df_registered_shell[line, 4]
 
-        # first, check to see if there's a model value at this exact point.
-        # model_indices = np.where((df_model.T[0] == block_lat_mid) & (df_model.T[1] == block_lon_mid) & (df_model.T[2] == shell_mid))[0]
-        # if len(model_indices) == 1:
-        #     df_registered_shell[line, 5] = df_model[model_indices][0][3]
-        # # if there isn't a model value at this exact point, calculate an average of all model values that fall into our block
-        # else:
         model_indices = np.where((df_model.T[4] == shell_no) & (df_model.T[5] == block))[0]
         if len(model_indices) == 0:
             df_registered_shell[line, 5] = 0.
         else:
-            df_registered_shell[line, 5] = np.mean(df_model[model_indices, 3])
+            lat1_rad = np.radians(block_lat_mid)
+            lon1_rad = np.radians(block_lon_mid + 180.)
+            lat2_rad = np.radians(df_model[model_indices, 0])
+            lon2_rad = np.radians(df_model[model_indices, 1] + 180.)
+            a = (np.sin((lat2_rad - lat1_rad) / 2) ** 2) + np.cos(lat1_rad) * np.cos(lat2_rad) * (np.sin((lon2_rad - lon1_rad) / 2) ** 2)
+            c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+            model_lateral_diff_deg = np.degrees(c)
+            
+            model_lateral_diff = ((2 * np.pi * shell_mid) / 360) * model_lateral_diff_deg
+            model_radial_diff = np.absolute(shell_mid - df_model[model_indices, 2])
+            model_total_dist = np.sqrt((model_radial_diff ** 2) + (model_lateral_diff ** 2))
+            model_weights = (model_total_dist.max() - model_total_dist) / model_total_dist.max()
+
+            if sum(model_weights) == 0.:
+                df_registered_shell[line, 5] = np.mean(df_model[model_indices, 3])
+            else:
+                # df_registered_shell[line, 5] = (df_model[model_indices, 3] * model_weights).sum() / (model_weights).sum()
+                df_registered_shell[line, 5] = np.average(df_model[model_indices, 3], weights = model_weights)
+            # df_registered_shell[line, 5] = np.mean(df_model[model_indices, 3])
 
     if convert == True:
         update_ref_val = mod_refmodels.prem_vel(mod_input.data_wave_type, shell_mid)
@@ -482,46 +494,6 @@ df_rms.to_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_ty
 
 # save the interpolated file
 df_registered_model.to_csv(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model_name}_update/{model_name}_grid_registered.csv', index = False)
-
-
-
-
-
-with open(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model_name}_update/pt3_log_model_processing.txt', 'a') as fout:
-    fout.write(f'- making the original model plot files\n')
-    
-try:
-    os.mkdir(f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model_name}_update/original_model_plot_files')
-except:
-    pass
-
-lats = np.arange(mod_input.start_lat, mod_input.final_lat, mod_input.reference_lat)
-lons = np.arange(mod_input.start_lon, mod_input.final_lon, mod_input.reference_lon)
-plot_file_path = f'./{mod_input.tomography_model_directory}/{mod_input.data_wave_type}/{model_name}_update/original_model_plot_files'
-
-for shell_to_plot in all_shells:
-    og_perturbs_file = f'{plot_file_path}/{model_name}_shell_{shell_to_plot}_original_perturbs_plot_ready_{mod_input.reference_lat}deg_lat_by_{mod_input.reference_lon}deg_lon.csv'
-    df_og_shell_data = df_registered_model.loc[df_registered_model['SHELL#'] == shell_to_plot]
-    df_og = pd.DataFrame(data = {'LON': lons})
-
-    # make empty lists that will be filled with numpy arrays for each latitude band, for each model.
-    og_dvs = []
-    
-    # loop through all latitudes in the model space
-    for lat in lats:
-        # make empty lists to fill in the perturbations for the current latitude band
-        lat_og_dvs = []
-    
-        # loop through all longitudes in the model space
-        for lon in lons:
-            # find the block that the current lat/lon pair falls in
-            block = mod_database.find_block_id(lat, lon)
-            original_perturb = float(df_og_shell_data.loc[df_og_shell_data['BLOCK#'] == block][out_property_header].iloc[0])
-            lat_og_dvs.append(original_perturb)
-        
-        og_dvs.append(np.array(lat_og_dvs))
-        df_og[f'{lat}'] = lat_og_dvs
-    df_og.to_csv(og_perturbs_file, index = False)
 
 end_subj = f'Process ended (PID: {pid}); part3.model_processing.py'
 end_text = f'Process {pid} complete;\nRuntime: {mod_track.runtime(time.time() - start_time)}'

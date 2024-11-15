@@ -406,20 +406,24 @@ def backmap_residual(lists_of_paths, list_idx):
 
 
 def model_smoothing(shell_no):
+    df_shell_smoothing_info = pd.read_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}.csv')
     df_model_arr = np.array(df_model)
     df_updated_model_shell = np.array(pd.DataFrame(data = {'SHELL#': shell_no, 'BLOCK#': all_blocks, out_property_header: 0.}))
-    cols = ['SECTOR', out_property_header, 'GAUSS_WEIGHT']
+    cols = ['BLOCK#', 'SECTOR', out_property_header, 'GAUSS_WEIGHT']
     special_weight_id = 3
     special_weight_ids = []
     for special_weight in layer_special_weights:
         cols.append(special_weight)
         special_weight_ids.append(special_weight_id)
         special_weight_id += 1
+    df_shell_smoothing_info = df_shell_smoothing_info[cols]
+    df_shell_smoothing_info = np.array(df_shell_smoothing_info)
         
     for block_no in all_blocks:
-        df_smoothing = pd.read_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}/block_{block_no}.csv')
-        df_smoothing = df_smoothing[cols]
-        df_smoothing = np.array(df_smoothing)
+        df_smoothing = df_shell_smoothing_info[np.where(df_shell_smoothing_info.T[0] == block_no)[0]][:, 1:]
+        # df_smoothing = pd.read_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}/block_{block_no}.csv')
+        # df_smoothing = df_smoothing[cols]
+        # df_smoothing = np.array(df_smoothing)
 
         # ONLY ENTER THE SMOOTHING LOOP if there is at least one segment in df_smoothing.
         # otherwise, if there are 0 paths, don't bother smoothing and just use the value of the current block.
@@ -529,8 +533,11 @@ def merge_block_files(shell_no):
 def update_smoothing_block(shell_no):
     df_updated_shell = pd.read_csv(f'{block_centric_path}/shell_{shell_no}.csv')
     df_smoothing_radii = np.array(pd.read_csv(f'{layer_directory}/shell_{shell_no}_smoothing_radii.csv'))
-    cols = list(df_updated_shell.columns)
-    cols.append('GAUSS_WEIGHT')
+    df_smoothing_shell_info = pd.read_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}.csv')
+    df_smoothing_shell_info_new = pd.DataFrame()
+    # cols = list(df_updated_shell.columns)
+    cols = list(smoothing_shell_info.columns)
+    # cols.append('GAUSS_WEIGHT')
     
     for block_no in all_blocks:
         # find the center lat/lon of the current block
@@ -542,37 +549,41 @@ def update_smoothing_block(shell_no):
         block_smoothing_radius = df_smoothing_radii[block_smoothing_radius_idx, 1][0]
     
         # open the file with all of the raypath segments to be smoothed for this block
-        df_smoothing_block = pd.read_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}/block_{block_no}.csv')
+        # df_smoothing_block = pd.read_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}/block_{block_no}.csv')
+        df_smoothing_block = df_smoothing_shell_info.loc[df_smoothing_shell_info['BLOCK#'] == block_no]
         neighbors = df_smoothing_block['NEIGHBOR'].unique()
         df_smoothing_block = df_smoothing_block.drop(df_smoothing_block.index)
     
         for neighbor in neighbors:
             df_updated_block = df_updated_shell.loc[df_updated_shell['BLOCK#'] == neighbor].rename(columns = {'BLOCK#': 'NEIGHBOR'})
+            df_updated_block.insert(0, 'BLOCK#', block_no)
             df_smoothing_block = pd.concat([df_smoothing_block, df_updated_block])
         df_smoothing_block = df_smoothing_block.reset_index(drop = True)
         df_smoothing_block['GAUSS_WEIGHT'] = 0.
         df_smoothing_block = np.array(df_smoothing_block)
             
         for segment_id in range(len(df_smoothing_block)):
-            segment_center_lat = df_smoothing_block[segment_id, 4]
-            segment_center_lon = df_smoothing_block[segment_id, 5]
+            segment_center_lat = df_smoothing_block[segment_id, 5]
+            segment_center_lon = df_smoothing_block[segment_id, 6]
             
             dist_to_center = mod_geo.GCP_length(block_center_lat, block_center_lon, segment_center_lat, segment_center_lon)
             gaus_weight = gaussian(block_smoothing_radius, dist_to_center, layer_gaussian_cutoff_weight)
-            if gaus_weight == 0.:
-                print(gaus_weight)
             df_smoothing_block[segment_id, -1] = gaus_weight
     
-        df_smoothing_block = pd.DataFrame(df_smoothing_block, columns = cols).rename(columns = {'BLOCK#': 'NEIGHBOR'})
+        df_smoothing_block = pd.DataFrame(df_smoothing_block, columns = cols)#.rename(columns = {'BLOCK#': 'NEIGHBOR'})
+        df_smoothing_block['BLOCK#'] = df_smoothing_block['BLOCK#'].astype(int)
         df_smoothing_block['NEIGHBOR'] = df_smoothing_block['NEIGHBOR'].astype(int)
         df_smoothing_block['PATH_ID'] = df_smoothing_block['PATH_ID'].astype(int)
         df_smoothing_block['SECTOR'] = df_smoothing_block['SECTOR'].astype(int)
-        
-        df_smoothing_block.to_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}/block_{block_no}.csv', index = False)
+
+        df_smoothing_shell_info = df_smoothing_shell_info.loc[df_smoothing_shell_info['BLOCK#'] != block_no]
+        df_smoothing_shell_info_new = pd.concat([df_smoothing_shell_info_new, df_smoothing_block])
+    df_smoothing_shell_info_new.to_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}.csv', index = False)
 
 
 def find_smoothing_radii(shell_no):
     df_shell_elements = pd.read_csv(f'{block_centric_path}/shell_{shell_no}.csv')
+    df_shell_smoothing_info = pd.DataFrame()
     df_shell_smoothing_radii = np.array(pd.DataFrame(data = {'BLOCK#': list(all_blocks), 'RADIUS': 0.}))
     df_shell_elements['GAUSS_WEIGHT'] = 0.
     cols = list(df_shell_elements.columns)
@@ -640,14 +651,17 @@ def find_smoothing_radii(shell_no):
                 df_smoothing[unique_path_segment, -1] = gaus_weight
     
         df_smoothing = pd.DataFrame(df_smoothing, columns = cols).rename(columns = {'BLOCK#': 'NEIGHBOR'})
+        df_smoothing.insert(0, 'BLOCK#', block_no)
         df_smoothing['NEIGHBOR'] = df_smoothing['NEIGHBOR'].astype(int)
         df_smoothing['PATH_ID'] = df_smoothing['PATH_ID'].astype(int)
         df_smoothing['SECTOR'] = df_smoothing['SECTOR'].astype(int)
-        df_smoothing.to_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}/block_{block_no}.csv', index = False)
+        df_shell_smoothing_info = pd.concat([df_shell_smoothing_info, df_smoothing])
+        # df_smoothing.to_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}/block_{block_no}.csv', index = False)
         
         smoothing_idx = np.where(df_shell_smoothing_radii.T[0] == block_no)
         df_shell_smoothing_radii[smoothing_idx, 1] = radius
-        
+    
+    df_shell_smoothing_info.to_csv(f'{layer_directory}/smoothing_block_information/shell_{shell_no}.csv', index = False)
     df_shell_smoothing_radii = pd.DataFrame(df_shell_smoothing_radii, columns = ['BLOCK#', 'RADIUS'])
     df_shell_smoothing_radii['BLOCK#'] = df_shell_smoothing_radii['BLOCK#'].astype(int)
     df_shell_smoothing_radii.to_csv(f'{layer_directory}/shell_{shell_no}_smoothing_radii.csv', index = False)
@@ -1028,10 +1042,10 @@ for layer_bottom_shell in mod_input.layer_base_shells:
                 if __name__ == '__main__':
                     find_radii_process_list = []
                     for shell_no in shells_to_update:
-                        try:
-                            os.mkdir(f'{layer_directory}/smoothing_block_information/shell_{shell_no}')
-                        except:
-                            pass
+                        # try:
+                        #     os.mkdir(f'{layer_directory}/smoothing_block_information/shell_{shell_no}')
+                        # except:
+                        #     pass
                         p = mp.Process(target = find_smoothing_radii, args = (shell_no,))
                         p.start()
                         find_radii_process_list.append(p)
@@ -1113,77 +1127,7 @@ for layer_bottom_shell in mod_input.layer_base_shells:
             max_rms_value = df_rms[RMS_header].max()
             df_rms[f'NORM_{RMS_header}'] = df_rms[RMS_header] / max_rms_value
             df_rms.to_csv(f'{iteration_directory_path}/{model}_updated_rms_itr_{layer_iteration}.csv', index = False)
-    
-            # make plottable files for the current iteration of the solution model and the difference between this model and the starting model
-            try:
-                os.mkdir(f'{iteration_directory_path}/plot_files')
-            except:
-                pass
-    
-            lats = np.arange(mod_input.start_lat, mod_input.final_lat, mod_input.reference_lat)
-            lons = np.arange(mod_input.start_lon, mod_input.final_lon, mod_input.reference_lon)
-            
-            for shell_to_plot in all_shells:
-                up_perturbs_file = f'{iteration_directory_path}/plot_files/{model}_shell_{shell_to_plot}_updated_perturbs_plot_ready_{job_id}.csv'
-                perturb_diffs_file = f'{iteration_directory_path}/plot_files/{model}_shell_{shell_to_plot}_perturb_diffs_plot_ready_{job_id}.csv'
-    
-                df_og_shell_data = df_original_model.loc[df_original_model['SHELL#'] == shell_to_plot]
-                df_model_shell_data = df_model.loc[df_model['SHELL#'] == shell_to_plot]
-                if layer_iteration == 1:
-                    radii_file = f'{iteration_directory_path}/plot_files/{model}_shell_{shell_to_plot}_smoothing_radii_plot_ready_{job_id}.csv'
-                    if shell_to_plot in shells_to_update:
-                        df_model_radii = pd.read_csv(f'{layer_directory}/shell_{shell_to_plot}_smoothing_radii.csv')
-                    else:
-                        df_model_radii = pd.DataFrame(columns = ['BLOCK#', 'RADIUS'])
-                        df_model_radii['BLOCK#'] = all_blocks
-                        df_model_radii['RADIUS'] = 0.
-                    df_radii = pd.DataFrame(data = {'LON': lons})
-                
-                df_updated = pd.DataFrame(data = {'LON': lons})
-                df_differences = pd.DataFrame(data = {'LON': lons})
-            
-                # make empty lists that will be filled with numpy arrays for each latitude band, for each model.
-                up_dvs = []
-                diff_dvs = []
-                radii = []
-    
-                # loop through all latitudes in the model space
-                for lat in lats:
-                    # make empty lists to fill in the perturbations for the current latitude band
-                    lat_up_dvs = []
-                    lat_diff_dvs = []
-                    lat_radii = []
-                
-                    # loop through all longitudes in the model space
-                    for lon in lons:
-                        # find the block that the current lat/lon pair falls in
-                        block = mod_database.find_block_id(lat, lon)
-                        original_perturb = float(df_og_shell_data.loc[df_og_shell_data['BLOCK#'] == block][out_property_header].iloc[0])
-                        updated_perturb = float(df_model_shell_data.loc[df_model_shell_data['BLOCK#'] == block][out_property_header].iloc[0])
-                        diff_perturb = updated_perturb - original_perturb
-                        if layer_iteration == 1:
-                            radius = int(df_model_radii.loc[df_model_radii['BLOCK#'] == block]['RADIUS']) - 0.1
-                            lat_radii.append(radius)
-                        
-                        lat_up_dvs.append(updated_perturb)
-                        lat_diff_dvs.append(diff_perturb)
-                    
-                    up_dvs.append(np.array(lat_up_dvs))
-                    diff_dvs.append(np.array(lat_diff_dvs))
-                    
-                    df_updated[f'{lat}'] = lat_up_dvs
-                    df_differences[f'{lat}'] = lat_diff_dvs
-    
-                    if layer_iteration == 1:
-                        radii.append(np.array(lat_radii))
-                        df_radii[f'{lat}'] = lat_radii
-        
-                df_updated.to_csv(up_perturbs_file, index = False)
-                df_differences.to_csv(perturb_diffs_file, index = False)
 
-                if layer_iteration == 1:
-                    df_radii.to_csv(radii_file, index = False)
-    
             iteration_time = time.time() - iteration_start
 
             with open(f'{update_path}/pt7_{job_id}_update_log.txt', 'a') as fout:
@@ -1216,7 +1160,6 @@ for layer_bottom_shell in mod_input.layer_base_shells:
         os.remove(f'{layer_directory}/shell_{shell}_smoothing_radii.csv')
     df_smoothing_radii_master.to_csv(f'{layer_directory}/smoothing_radii.csv', index = False)
 
-    # df_layer_variance = pd.DataFrame(data = {'layer': layers_complete, 'iteration': list(range(1, len(unexplained_means) + 1, 1)), 'total_paths': total_paths_itr, 'misfit_mean': unexplained_means, 'misfit_std': unexplained_stds, 'misfit_var': unexplained_vars})
     df_layer_variance = pd.DataFrame(data = {'layer': layers_complete, 'iteration': list(range(0, len(unexplained_means), 1)), 'total_paths': total_paths_itr, 'misfit_mean': unexplained_means, 'misfit_std': unexplained_stds, 'misfit_var': unexplained_vars})
     df_variance = pd.concat([df_variance, df_layer_variance])
     df_variance = df_variance.reset_index(drop = True)
